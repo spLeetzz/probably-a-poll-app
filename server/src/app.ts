@@ -9,6 +9,7 @@ import itemsRoutes from "./items/items.routes.js";
 import optionsRoutes from "./options/options.routes.js";
 import responsesRoutes from "./responses/responses.routes.js";
 import proxyRoutes from "./proxy/proxy.routes.js";
+import cors from "@fastify/cors";
 
 const app = Fastify({ logger: true });
 
@@ -29,9 +30,16 @@ app.addHook("preHandler", async (req: FastifyRequest) => {
 await app.register(sensible);
 await app.register(cookie);
 
+await app.register(cors, {
+  origin: process.env.FRONTEND_URL || "http://localhost:3000",
+  credentials: true,
+});
+
 await app.register(eventsRoutes, { prefix: "/events" });
 await app.register(itemsRoutes, { prefix: "/events/:eventId/items" });
-await app.register(optionsRoutes, { prefix: "/events/:eventId/items/:itemId/options" });
+await app.register(optionsRoutes, {
+  prefix: "/events/:eventId/items/:itemId/options",
+});
 await app.register(responsesRoutes, { prefix: "/events/:eventId" });
 await app.register(proxyRoutes, { prefix: "/proxy" });
 

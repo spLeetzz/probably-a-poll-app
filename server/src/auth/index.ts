@@ -22,16 +22,23 @@ export const auth = betterAuth({
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
     },
   },
+  trustedOrigins: [process.env.FRONTEND_URL!, "http://localhost:3000"],
   session: {
     expiresIn: 60 * 60 * 24 * 7,
     updateAge: 60 * 60 * 24,
     cookieCache: { enabled: true, maxAge: 60 * 5 },
   },
+  advanced: {
+    defaultCookieAttributes: {
+      httpOnly: true,
+      secure: true,
+      sameSite: "none",
+      partitioned: true,
+    },
+  },
   plugins: [
     anonymous({
       onLinkAccount: async ({ anonymousUser, newUser }) => {
-
-        // not awaiting as it will slow down UX, sign up process should be smooth
         db.update(events)
           .set({ creatorId: newUser.user.id })
           .where(eq(events.creatorId, anonymousUser.user.id))
