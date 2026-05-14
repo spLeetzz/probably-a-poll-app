@@ -335,7 +335,7 @@ export function EventDetailPage() {
 
   const handleSubmitResponse = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!eventId) return;
+    if (!eventId || !event) return;
     // Block anonymous/unauthenticated users only if the event requires authentication
     if (event.authOnly && (!isAuthenticated || isAnonymous)) {
       toast.error("Please sign in to submit a response.");

@@ -19,6 +19,7 @@ export function buildAnalyticsFromItems(
             ? Math.round((o.voteCount / totalResponses) * 1000) / 10
             : 0,
       })),
+      textResponses: [],
     })),
   }
 }
