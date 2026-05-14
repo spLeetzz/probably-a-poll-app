@@ -18,7 +18,10 @@ export interface ServerToClientEvents {
     totalResponses: number;
   }) => void;
   "response:count": (payload: { totalResponses: number }) => void;
-  "participant:status_updated": (payload: { participantId: string; status: string }) => void;
+  "participant:status_updated": (payload: {
+    participantId: string;
+    status: string;
+  }) => void;
   error: (payload: { message: string }) => void;
 }
 
@@ -81,7 +84,9 @@ export function setupSocket(server: HttpServer): IOServer {
           event.resultsVisibility === "private" &&
           socket.data.userId !== event.creatorId
         ) {
-          socket.emit("error", { message: "Access denied: results are private" });
+          socket.emit("error", {
+            message: "Access denied: results are private",
+          });
           return;
         }
 
@@ -97,6 +102,7 @@ export function setupSocket(server: HttpServer): IOServer {
 }
 
 export function getIo(): IOServer {
-  if (!io) throw new Error("Socket.io not initialised — call setupSocket() first");
+  if (!io)
+    throw new Error("Socket.io not initialised , call setupSocket() first");
   return io;
 }

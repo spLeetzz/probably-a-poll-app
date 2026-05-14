@@ -4,7 +4,7 @@ Real-time polling platform. Anonymous or authenticated participants. Live vote s
 
 ```
 poll-app/
-├── server/   # Fastify backend — REST + WebSocket
+├── server/   # Fastify backend | REST + WebSocket
 └── client/     # React + Vite frontend
 ```
 
@@ -13,6 +13,7 @@ poll-app/
 ## Features
 
 ### Events
+
 - Create poll events with title, description, expiry date
 - **Lifecycle:** `pending → running → completed`
 - **Join modes:** open (anyone joins) or approval (host approves each participant)
@@ -21,12 +22,14 @@ poll-app/
 - Publish completed events to make results permanently visible
 
 ### Questions (Items)
+
 - Add unlimited questions per event
 - Mark questions as mandatory
 - Each question can have multiple choice options or be open-ended (text answer)
 - Questions only editable while event is `pending`
 
 ### Responses
+
 - Submit answers to all questions in one atomic transaction
 - Prevents duplicate submissions per session
 - Validates mandatory fields before insert
@@ -34,25 +37,29 @@ poll-app/
 - Option-based answers increment `voteCount` atomically
 
 ### Real-time
+
 - WebSocket room per event (Socket.IO)
 - Live `response:new` → updates vote counts for all viewers instantly
 - Live `response:count` → updates total response counter
 - `participant:status_updated` → host approval reflected immediately to participant
-- Anonymous users get a hidden Better Auth session automatically — no sign-in prompt needed
+- Anonymous users get a hidden Better Auth session automatically, no sign-in prompt needed
 
 ### Authentication
+
 - Google OAuth via Better Auth
-- Anonymous sessions — created silently on first API call, invisible to user
-- Session cookie based — no token management in frontend
+- Anonymous sessions , created silently on first API call, invisible to user
+- Session cookie based , no token management in frontend
 - Authenticated users can be identified across events
 
 ### Participants & Approval
+
 - Every submission creates or updates a `participant` row
 - Approval mode: participants start `pending`, host approves or rejects
 - Rejected participants cannot submit
 - Host sees participant list with names and status in real time
 
 ### Analytics
+
 - Per-question breakdown: vote counts + percentages per option
 - Total response count
 - Text answers collected per open-ended question
@@ -63,6 +70,7 @@ poll-app/
 ## Running locally
 
 ### Backend
+
 ```bash
 cd server
 cp .env.example .env     # fill values
@@ -71,6 +79,7 @@ npm run dev              # runs on :4000
 ```
 
 ### Frontend
+
 ```bash
 cd client
 cp .env.example .env     # fill values
@@ -83,18 +92,20 @@ npm run dev              # runs on :5173
 ## Environment variables
 
 ### Backend (`server/.env`)
-| Variable | Description |
-|---|---|
-| `DATABASE_URL` | Postgres connection string (Supabase pooler URL) |
-| `BETTER_AUTH_SECRET` | Random secret for session signing |
-| `BETTER_AUTH_URL` | Public URL of backend (e.g. `http://localhost:4000`) |
-| `GOOGLE_CLIENT_ID` | Google OAuth client ID |
-| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret |
-| `PORT` | Port to listen on (default `4000`) |
+
+| Variable               | Description                                          |
+| ---------------------- | ---------------------------------------------------- |
+| `DATABASE_URL`         | Postgres connection string (Supabase pooler URL)     |
+| `BETTER_AUTH_SECRET`   | Random secret for session signing                    |
+| `BETTER_AUTH_URL`      | Public URL of backend (e.g. `http://localhost:4000`) |
+| `GOOGLE_CLIENT_ID`     | Google OAuth client ID                               |
+| `GOOGLE_CLIENT_SECRET` | Google OAuth client secret                           |
+| `PORT`                 | Port to listen on (default `4000`)                   |
 
 ### Frontend (`client/.env`)
-| Variable | Description |
-|---|---|
+
+| Variable             | Description                                     |
+| -------------------- | ----------------------------------------------- |
 | `VITE_AUTH_BASE_URL` | Backend base URL (e.g. `http://localhost:4000`) |
 
 ---
@@ -120,6 +131,7 @@ All endpoints return `{ data: ... }` on success or `{ message: string }` on erro
 ### Events
 
 #### `GET /events`
+
 List events.
 
 **Query params**
@@ -135,9 +147,11 @@ List events.
 ---
 
 #### `POST /events`
+
 Create event. Auth required.
 
 **Body**
+
 ```json
 {
   "title": "Team Feedback Q2",
@@ -153,14 +167,17 @@ Create event. Auth required.
 ---
 
 #### `GET /events/:id`
+
 Get single event. Includes `participant` field if caller has joined.
 
 ---
 
 #### `PATCH /events/:id`
+
 Update event metadata. Creator only. Event must be `pending`.
 
-**Body** — all fields optional
+**Body** , all fields optional
+
 ```json
 {
   "title": "Updated title",
@@ -175,21 +192,25 @@ Update event metadata. Creator only. Event must be `pending`.
 ---
 
 #### `DELETE /events/:id`
+
 Delete event and all related data. Creator only.
 
 ---
 
 #### `POST /events/:id/start`
+
 Transition `pending → running`. Creator only.
 
 ---
 
 #### `POST /events/:id/complete`
+
 Transition `running → completed`. Creator only.
 
 ---
 
 #### `POST /events/:id/publish`
+
 Transition `completed → published`. Makes results public. Creator only.
 
 ---
@@ -197,11 +218,13 @@ Transition `completed → published`. Makes results public. Creator only.
 ### Items (Questions)
 
 #### `GET /events/:eventId/items`
+
 List all questions with their options.
 
 ---
 
 #### `POST /events/:eventId/items`
+
 Add question. Creator only. Event must be `pending`.
 
 ```json
@@ -215,11 +238,13 @@ Add question. Creator only. Event must be `pending`.
 ---
 
 #### `GET /events/:eventId/items/:itemId`
+
 Get single question with options.
 
 ---
 
 #### `PATCH /events/:eventId/items/:itemId`
+
 Update question. Creator only. Event must be `pending`.
 
 ```json
@@ -233,6 +258,7 @@ Update question. Creator only. Event must be `pending`.
 ---
 
 #### `DELETE /events/:eventId/items/:itemId`
+
 Delete question. Creator only. Event must be `pending`.
 
 ---
@@ -240,11 +266,13 @@ Delete question. Creator only. Event must be `pending`.
 ### Options
 
 #### `GET /events/:eventId/items/:itemId/options`
+
 List options for question.
 
 ---
 
 #### `PUT /events/:eventId/items/:itemId/options`
+
 Replace all options. Creator only. Event must be `pending`.
 
 ```json
@@ -264,6 +292,7 @@ Send empty array `{ "options": [] }` to make question open-ended (text answer).
 ### Responses
 
 #### `POST /events/:eventId/respond`
+
 Submit answers. Event must be `running`. One submission per session.
 
 ```json
@@ -276,6 +305,7 @@ Submit answers. Event must be `running`. One submission per session.
 ```
 
 **Returns**
+
 ```json
 {
   "data": {
@@ -288,10 +318,12 @@ Submit answers. Event must be `running`. One submission per session.
 ---
 
 #### `GET /events/:eventId/analytics`
+
 Get vote counts + percentages per option and text responses for open-ended questions.
 Gated by `resultsVisibility`. Creator always has access.
 
 **Response**
+
 ```json
 {
   "data": {
@@ -301,7 +333,12 @@ Gated by `resultsVisibility`. Creator always has access.
         "itemId": "uuid",
         "text": "Question text",
         "options": [
-          { "optionId": "uuid", "text": "Option A", "voteCount": 20, "percentage": 47.6 }
+          {
+            "optionId": "uuid",
+            "text": "Option A",
+            "voteCount": 20,
+            "percentage": 47.6
+          }
         ],
         "textResponses": []
       }
@@ -315,11 +352,13 @@ Gated by `resultsVisibility`. Creator always has access.
 ### Participants
 
 #### `GET /events/:eventId/participants`
+
 List participants. Creator only.
 
 ---
 
 #### `PATCH /events/:eventId/participants/:participantId`
+
 Approve or reject participant. Creator only. Only on approval-mode events.
 
 ```json
@@ -334,33 +373,33 @@ Connect to `ws://localhost:4000` with credentials (session cookie must be presen
 
 #### Client → Server
 
-| Event | Payload | Description |
-|---|---|---|
+| Event       | Payload       | Description                      |
+| ----------- | ------------- | -------------------------------- |
 | `join:room` | `{ eventId }` | Join event room for live updates |
 
 #### Server → Client
 
-| Event | Payload | Description |
-|---|---|---|
-| `room:joined` | `{ eventId }` | Confirms room join |
-| `response:new` | `{ optionId, itemId, newVoteCount, totalResponses }` | Vote cast |
-| `response:count` | `{ totalResponses }` | Total response count updated |
-| `participant:status_updated` | `{ participantId, status }` | Approval status changed |
-| `error` | `{ message }` | Something went wrong |
+| Event                        | Payload                                              | Description                  |
+| ---------------------------- | ---------------------------------------------------- | ---------------------------- |
+| `room:joined`                | `{ eventId }`                                        | Confirms room join           |
+| `response:new`               | `{ optionId, itemId, newVoteCount, totalResponses }` | Vote cast                    |
+| `response:count`             | `{ totalResponses }`                                 | Total response count updated |
+| `participant:status_updated` | `{ participantId, status }`                          | Approval status changed      |
+| `error`                      | `{ message }`                                        | Something went wrong         |
 
 ---
 
 ## Tech stack
 
-| Layer | Tech |
-|---|---|
-| Backend framework | Fastify |
-| ORM | Drizzle ORM |
-| Database | PostgreSQL (Supabase) |
-| Auth | Better Auth (Google OAuth + anonymous sessions) |
-| WebSocket | Socket.IO |
-| Frontend | React 19 + Vite |
-| Routing | React Router v7 |
-| UI | shadcn/ui + Radix + Tailwind CSS v4 |
-| Charts | Recharts |
-| Realtime client | socket.io-client |
+| Layer             | Tech                                            |
+| ----------------- | ----------------------------------------------- |
+| Backend framework | Fastify                                         |
+| ORM               | Drizzle ORM                                     |
+| Database          | PostgreSQL (Supabase)                           |
+| Auth              | Better Auth (Google OAuth + anonymous sessions) |
+| WebSocket         | Socket.IO                                       |
+| Frontend          | React 19 + Vite                                 |
+| Routing           | React Router v7                                 |
+| UI                | shadcn/ui + Radix + Tailwind CSS v4             |
+| Charts            | Recharts                                        |
+| Realtime client   | socket.io-client                                |

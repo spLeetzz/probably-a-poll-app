@@ -19,7 +19,7 @@ export function errorHandler(
   }
 
   // 3. Catch Postgres constraint errors BEFORE statusCode check
-  // Drizzle double-wraps — check up to 2 levels deep
+  // Drizzle double-wraps , check up to 2 levels deep
   const pgCode =
     (error as any).code ??
     (error as any).cause?.code ??

@@ -22,7 +22,7 @@
     "zod": "^4.4.3"
   },
   "scripts": {
-    "dev": "tsx watch server/main.ts",
+    "dev": "tsx watch src/main.ts",
     "build": "tsc"
   }
 }
