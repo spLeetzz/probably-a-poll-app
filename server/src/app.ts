@@ -10,7 +10,7 @@ import optionsRoutes from "./options/options.routes.js";
 import responsesRoutes from "./responses/responses.routes.js";
 import proxyRoutes from "./proxy/proxy.routes.js";
 import cors from "@fastify/cors";
-import { ALLOWED_ORIGINS } from "./main.js";
+import { ALLOWED_ORIGINS } from "./origins.js";
 
 const app = Fastify({ logger: true });
 

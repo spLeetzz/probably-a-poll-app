@@ -4,7 +4,7 @@ import { auth } from "../auth/index.js";
 import { db } from "../db/index.js";
 import { events } from "../db/schema.js";
 import { eq } from "drizzle-orm";
-import { ALLOWED_ORIGINS } from "../main.js";
+import { ALLOWED_ORIGINS } from "../origins.js";
 
 export interface ClientToServerEvents {
   "join:room": (payload: { eventId: string }) => void;

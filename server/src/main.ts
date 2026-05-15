@@ -4,11 +4,7 @@ import { auth } from "./auth/index.js";
 import app from "./app.js";
 import { toNodeHandler } from "better-auth/node";
 import { setupSocket } from "./socket/index.js";
-
-export const ALLOWED_ORIGINS = [
-  process.env.FRONTEND_URL,
-  "http://localhost:3000",
-].filter(Boolean) as string[];
+import { ALLOWED_ORIGINS } from "./origins.js";
 
 const server = createServer(async (req, res) => {
   if (req.url?.startsWith("/api/auth")) {
