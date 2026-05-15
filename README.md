@@ -1,6 +1,12 @@
 # Probably a Poll App
 
-Real-time polling platform for settling scores and making decisions. Create standard polls or jump into a Banter room for live chat and instant voting. Anonymous or authenticated participants. Live vote sync via WebSocket. Approval-gated events. Analytics per question.
+Real-time polling platform for settling scores and making decisions.
+
+Create standard polls or jump into a Banter room for live chat and instant voting.
+
+Anonymous or authenticated participants.
+
+Live vote sync via WebSocket. Approval-gated events. Analytics per question.
 
 ```
 poll-app/
@@ -20,7 +26,7 @@ Ever had an argument in a WhatsApp group and couldn't settle it? Create a Banter
 - **Anonymous Polling:** No one knows who voted for what, keeping the peace in the group.
 - **Ephemeral & Fast:** Share a link, join with a name, and start settling the score.
 
-### Events
+### Polls
 
 - Create poll events with title, description, expiry date
 - **Lifecycle:** `pending → running → completed`
@@ -29,7 +35,7 @@ Ever had an argument in a WhatsApp group and couldn't settle it? Create a Banter
 - **Auth gate:** mark event auth-only to block anonymous users from responding
 - Publish completed events to make results permanently visible
 
-### Questions (Items)
+### Questions 
 
 - Add unlimited questions per event
 - Mark questions as mandatory
