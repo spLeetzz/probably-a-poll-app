@@ -84,7 +84,7 @@ npm run dev              # runs on :4000
 cd client
 cp .env.example .env     # fill values
 npm install
-npm run dev              # runs on :5173
+npm run dev              # runs on :3000
 ```
 
 ---

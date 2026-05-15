@@ -1,10 +1,9 @@
 import { NO_SESSION_SUBSTRING } from './constants'
 import { runAnonymousSignIn } from './ensure-hidden-session'
 
-/**
- * Fetch for `/events/*` with credentials. On 401 + no session, creates an anonymous
- * Better Auth session once (invisible to the user) and retries the same request.
- */
+// Fetch for `/events/*` with credentials. On 401 + no session, creates an anonymous
+// Better Auth session once (invisible to the user) and retries the same request.
+ 
 export async function apiFetch(url: string | URL, init?: RequestInit): Promise<Response> {
   const opts: RequestInit = { ...init, credentials: 'include' }
   const href = typeof url === 'string' ? url : url.toString()

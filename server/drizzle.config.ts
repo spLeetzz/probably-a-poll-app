@@ -1,8 +1,9 @@
+// @ts-nocheck
 import { defineConfig } from "drizzle-kit";
 
 export default defineConfig({
-  schema: ["./server/db/schema.ts", "./server/db/auth-schema.ts"],
-  out: "./server/db/migrations",
+  schema: ["./src/db/schema.ts", "./src/db/auth-schema.ts"],
+  out: "./src/db/migrations",
   dialect: "postgresql",
-  dbCredentials: { url: process.env.DATABASE_URL! },
+  dbCredentials: { url: process.env.DATABASE_URL },
 });

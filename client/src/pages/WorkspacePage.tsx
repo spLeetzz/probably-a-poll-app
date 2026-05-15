@@ -78,7 +78,7 @@ export function WorkspacePage() {
         <div className="space-y-2">
           <h1 className="text-4xl font-extrabold tracking-tight">Your Dashboard</h1>
           <p className="text-muted-foreground text-lg max-w-2xl">
-            Manage your polls, quizzes, and live events. Create interactive experiences and track results in real-time.
+            Manage your polls and live events. Create interactive experiences and track results in real-time.
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -97,7 +97,7 @@ export function WorkspacePage() {
                 <Plus className="h-5 w-5 text-primary" />
                 Create New
               </CardTitle>
-              <CardDescription>Launch a new poll or quiz in seconds.</CardDescription>
+              <CardDescription>Launch a new poll in seconds.</CardDescription>
             </CardHeader>
             <CardContent>
               <form onSubmit={onCreate} className="space-y-4">

@@ -5,43 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1778652356928,
-      "tag": "0000_mean_miek",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1778662504139,
-      "tag": "0001_past_gorilla_man",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1778690357418,
-      "tag": "0002_yellow_gabe_jones",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1778750187169,
-      "tag": "0003_jazzy_lord_hawal",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1778765231796,
-      "tag": "0004_modern_whistler",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1778772233650,
-      "tag": "0005_faulty_chronomancer",
+      "when": 1778801071145,
+      "tag": "0000_cynical_thing",
       "breakpoints": true
     }
   ]

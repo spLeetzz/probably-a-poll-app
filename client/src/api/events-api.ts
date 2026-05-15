@@ -268,7 +268,7 @@ export async function updateParticipantStatus(
   return readApiData<Participant>(res)
 }
 
-export async function searchDeezerArtists(query: string): Promise<any[]> {
+export async function searchDeezerArtists(query: string): Promise<unknown[]> {
   const res = await apiFetch(`/proxy/deezer/search/artist?q=${encodeURIComponent(query)}`)
-  return readApiData<any[]>(res)
+  return readApiData<unknown[]>(res)
 }
