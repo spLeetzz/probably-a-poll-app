@@ -16,7 +16,7 @@ export const setOptionsBodySchema = {
   properties: {
     options: {
       type: "array",
-      minItems: 1,
+      minItems: 0,
       items: {
         type: "object",
         required: ["text", "order"],

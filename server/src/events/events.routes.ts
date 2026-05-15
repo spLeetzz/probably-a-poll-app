@@ -5,6 +5,10 @@ import {
   updateEventBodySchema,
   listEventsQuerySchema,
   eventParamsSchema,
+  slugParamsSchema,
+  joinBanterBodySchema,
+  sendMessageBodySchema,
+  messagesQuerySchema,
 } from "./events.schema.js";
 import {
   handleCreateEvent,
@@ -15,9 +19,17 @@ import {
   handleStartEvent,
   handleCompleteEvent,
   handlePublishEvent,
+  handleGetEventBySlug,
+  handleJoinRoom,
+  handleResetLink,
+  handleGetMessages,
+  handleSendMessage,
 } from "./events.handler.js";
+import { handleBanterVote } from "./banter-vote.handler.js";
 
 const eventsRoutes: FastifyPluginAsync = async (app) => {
+  // ── Standard event routes ──────────────────────────────────────────────
+
   app.post(
     "/",
     { schema: { body: createEventBodySchema }, preHandler: [resolveCreator] },
@@ -28,6 +40,13 @@ const eventsRoutes: FastifyPluginAsync = async (app) => {
     "/",
     { schema: { querystring: listEventsQuerySchema } },
     handleListEvents,
+  );
+
+  // Slug resolver — MUST come before /:id to avoid "slug" matching as an id
+  app.get(
+    "/slug/:joinSlug",
+    { schema: { params: slugParamsSchema } },
+    handleGetEventBySlug,
   );
 
   app.get(
@@ -64,6 +83,44 @@ const eventsRoutes: FastifyPluginAsync = async (app) => {
     "/:id/publish",
     { schema: { params: eventParamsSchema }, preHandler: [resolveCreator] },
     handlePublishEvent,
+  );
+
+  // ── Banter sub-routes (under /events/:id) ─────────────────────────────
+
+  app.post(
+    "/:id/join",
+    { schema: { params: eventParamsSchema, body: joinBanterBodySchema } },
+    handleJoinRoom,
+  );
+
+  app.post(
+    "/:id/reset-link",
+    { schema: { params: eventParamsSchema }, preHandler: [resolveCreator] },
+    handleResetLink,
+  );
+
+  app.get(
+    "/:id/messages",
+    { schema: { params: eventParamsSchema, querystring: messagesQuerySchema } },
+    handleGetMessages,
+  );
+
+  app.post(
+    "/:id/messages",
+    { schema: { params: eventParamsSchema, body: sendMessageBodySchema } },
+    handleSendMessage,
+  );
+  app.post(
+    "/:id/vote",
+    { schema: { params: eventParamsSchema, body: {
+      type: "object",
+      required: ["itemId", "optionId"],
+      properties: {
+        itemId: { type: "string" },
+        optionId: { type: "string" },
+      },
+    }}},
+    handleBanterVote,
   );
 };
 

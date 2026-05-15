@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { db } from "../db/index.js";
 import { options } from "../db/schema.js";
 import type { OptionInput } from "./options.schema.js";
@@ -43,4 +43,17 @@ export async function listOptions(itemId: string) {
     .from(options)
     .where(eq(options.itemId, itemId))
     .orderBy(options.order);
+}
+
+/**
+ * Atomically increments the voteCount for a single option.
+ * Returns the updated option row.
+ */
+export async function incrementOptionVote(optionId: string) {
+  const [updated] = await db
+    .update(options)
+    .set({ voteCount: sql`${options.voteCount} + 1` })
+    .where(eq(options.id, optionId))
+    .returning();
+  return updated ?? null;
 }

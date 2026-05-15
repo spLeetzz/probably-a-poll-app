@@ -5,6 +5,7 @@ import { db } from "../db/index.js";
 import { events } from "../db/schema.js";
 import { eq } from "drizzle-orm";
 import { ALLOWED_ORIGINS } from "../origins.js";
+import { setupBanterNamespace } from "./banter.js";
 
 export interface ClientToServerEvents {
   "join:room": (payload: { eventId: string }) => void;
@@ -96,6 +97,12 @@ export function setupSocket(server: HttpServer): IOServer {
       }
     });
   });
+
+  // Set up /banter namespace for real-time chat
+  const banterNsp = io.of("/banter");
+  // Banter namespace has no global auth middleware —
+  // participants authenticate via sessionToken in join_room event.
+  setupBanterNamespace(banterNsp as any);
 
   return io;
 }

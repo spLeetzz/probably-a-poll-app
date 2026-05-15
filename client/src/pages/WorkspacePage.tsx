@@ -1,15 +1,239 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import * as api from '../api/events-api'
 import type { CreateEventBody, Event } from '../api/events-api'
 import { authClient } from '../lib/auth-client'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
-import { Plus, RefreshCcw, LayoutGrid, ListFilter, Calendar as CalendarIcon, Clock, CheckCircle2 } from 'lucide-react'
+import { Switch } from '@/components/ui/switch'
+import {
+  BarChart2, MessageSquare, ArrowRight,
+  Zap, Globe, Users, Calendar as CalendarIcon, LogOut, User as UserIcon, Settings,
+} from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+
+type CreateMode = 'poll' | 'banter' | null
+
+function HeroText() {
+  return (
+    <div className="space-y-6 select-none py-4">
+      <p
+        className="text-sm font-medium uppercase tracking-[0.4em] text-primary/40"
+        style={{ animation: 'fadeUp 0.5s ease both', animationDelay: '0ms' }}
+      >
+        probably a poll app
+      </p>
+      <div className="space-y-4">
+        <h1
+          className="text-5xl sm:text-7xl font-black tracking-tighter leading-[0.9]"
+          style={{ animation: 'fadeUp 0.5s ease both', animationDelay: '80ms' }}
+        >
+          Create banter<br />rooms.
+        </h1>
+        <p
+          className="text-3xl sm:text-4xl font-light tracking-tight text-muted-foreground leading-relaxed"
+          style={{ animation: 'fadeUp 0.5s ease both', animationDelay: '160ms' }}
+        >
+          No sign up required.
+        </p>
+        <p
+          className="text-4xl sm:text-5xl font-black italic tracking-tight text-primary/80"
+          style={{ animation: 'fadeUp 0.5s ease both', animationDelay: '240ms' }}
+        >
+          Just fight.
+        </p>
+      </div>
+    </div>
+  )
+}
+
+interface QuickCreateFormProps {
+  mode: CreateMode
+  onClose: () => void
+  onCreate: (body: CreateEventBody) => Promise<void>
+  creating: boolean
+}
+
+function QuickCreateForm({ mode, onClose, onCreate, creating }: QuickCreateFormProps) {
+  const [title, setTitle] = useState('')
+  const [isPrivate, setIsPrivate] = useState(false)
+  const [isAnonymous, setIsAnonymous] = useState(false)
+  const [requireLogin, setRequireLogin] = useState(false)
+  const [privateResults, setPrivateResults] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    setTimeout(() => inputRef.current?.focus(), 50)
+  }, [])
+
+  if (!mode) return null
+
+  const isBanter = mode === 'banter'
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!title.trim()) return
+    await onCreate({
+      title: title.trim(),
+      type: mode,
+      isPrivate: isBanter ? isPrivate : undefined,
+      isAnonymous: isBanter ? isAnonymous : undefined,
+      authOnly: requireLogin,
+      resultsVisibility: privateResults ? 'private' : 'public',
+    })
+  }
+
+  return (
+    <div
+      className="border rounded-xl overflow-hidden bg-card shadow-lg"
+      style={{ animation: 'expandDown 0.2s ease both' }}
+    >
+      <div className="flex items-center justify-between px-4 pt-4 pb-2">
+        <div className="flex items-center gap-2">
+          {isBanter
+            ? <MessageSquare className="h-4 w-4" />
+            : <BarChart2 className="h-4 w-4" />}
+          <span className="font-semibold text-sm">
+            {isBanter ? 'New Banter Room' : 'New Poll'}
+          </span>
+        </div>
+        <button
+          onClick={onClose}
+          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+        >
+          ✕ cancel
+        </button>
+      </div>
+
+      <form onSubmit={handleSubmit} className="px-4 pb-4 space-y-4 h-[150px] flex flex-col">
+        <Input
+          ref={inputRef}
+          placeholder={isBanter ? 'What\'s the room about?' : 'What are you polling?'}
+          value={title}
+          onChange={e => setTitle(e.target.value)}
+          required
+          className="h-11 text-base font-medium border-b border-t-0 border-x-0 rounded-none px-0 focus-visible:ring-0 focus-visible:border-foreground bg-transparent shrink-0"
+        />
+
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+            {isBanter ? (
+              <>
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <Switch checked={isPrivate} onCheckedChange={setIsPrivate} />
+                  <span className="text-sm flex items-center gap-1">🔒 Private</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <Switch checked={isAnonymous} onCheckedChange={setIsAnonymous} />
+                  <span className="text-sm">👻 Anonymous</span>
+                </label>
+              </>
+            ) : (
+              <>
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <Switch checked={privateResults} onCheckedChange={setPrivateResults} />
+                  <span className="text-sm">🔒 Private Results</span>
+                </label>
+              </>
+            )}
+          </div>
+
+          <Button
+            type="submit"
+            disabled={creating || !title.trim()}
+            className="w-full font-bold h-10 shrink-0"
+          >
+            {creating ? 'Creating…' : (
+              <span className="flex items-center gap-2">
+                {isBanter ? 'Open Room' : 'Create Poll'}
+                <ArrowRight className="h-4 w-4" />
+              </span>
+            )}
+          </Button>
+        </div>
+      </form>
+    </div>
+  )
+}
+
+function EventCard({ ev }: { ev: Event }) {
+  const isBanter = ev.type === 'banter'
+  const href = isBanter && ev.joinSlug
+    ? `/room/${encodeURIComponent(ev.joinSlug)}`
+    : `/events/${encodeURIComponent(ev.id)}`
+
+  const statusColor = ev.status === 'running'
+    ? 'bg-emerald-500'
+    : ev.status === 'completed'
+      ? 'bg-zinc-400'
+      : 'bg-zinc-200 dark:bg-zinc-700'
+
+  return (
+    <Link to={href}>
+      <Card className="group h-full hover:border-primary/30 hover:shadow-xl transition-all duration-300 cursor-pointer overflow-hidden bg-card/40 backdrop-blur">
+        <CardHeader className="pb-3 pt-6 px-6">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <span className={`h-2.5 w-2.5 rounded-full ${statusColor} shadow-sm`} />
+              <span className="text-[11px] font-medium uppercase tracking-widest text-muted-foreground">
+                {ev.status === 'running' ? 'live' : ev.status}
+              </span>
+            </div>
+            <Badge variant="outline" className="text-[10px] h-5 px-2 font-medium bg-background/50">
+              {isBanter ? '💬 banter' : '📊 poll'}
+            </Badge>
+          </div>
+          <CardTitle className="text-base sm:text-lg font-bold leading-tight line-clamp-2 group-hover:text-primary transition-colors">
+            {ev.title}
+          </CardTitle>
+        </CardHeader>
+        <CardFooter className="px-6 pb-4 pt-3 text-xs text-muted-foreground flex justify-between border-t border-primary/5 mt-auto bg-muted/10">
+          <span className="flex items-center gap-1.5">
+            <CalendarIcon className="h-3.5 w-3.5" />
+            {new Date(ev.createdAt).toLocaleDateString()}
+          </span>
+          <span className="flex items-center gap-1.5 font-medium">
+            {ev.itemCount} {ev.itemCount === 1 ? 'item' : 'items'}
+          </span>
+        </CardFooter>
+      </Card>
+    </Link>
+  )
+}
+
+function SectionLabel({ icon, label, count }: { icon: React.ReactNode; label: string; count?: number }) {
+  return (
+    <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center gap-2 text-sm font-semibold">
+        {icon}
+        {label}
+      </div>
+      {count !== undefined && (
+        <span className="text-xs text-muted-foreground font-mono">{count}</span>
+      )}
+    </div>
+  )
+}
+
+function EmptyState({ text }: { text: string }) {
+  return (
+    <div className="border border-dashed rounded-xl py-8 text-center text-sm text-muted-foreground">
+      {text}
+    </div>
+  )
+}
 
 export function WorkspacePage() {
   const navigate = useNavigate()
@@ -17,18 +241,29 @@ export function WorkspacePage() {
   const [events, setEvents] = useState<Event[]>([])
   const [myEvents, setMyEvents] = useState<Event[]>([])
   const [loading, setLoading] = useState(true)
-
-  const [title, setTitle] = useState('')
+  const [createMode, setCreateMode] = useState<CreateMode>(null)
   const [creating, setCreating] = useState(false)
+  const [hasInteracted, setHasInteracted] = useState(false)
+  const [autoMode, setAutoMode] = useState<'poll' | 'banter'>('poll')
 
   const sessionUserId = session?.user?.id
+
+  useEffect(() => {
+    if (hasInteracted) return
+    const interval = setInterval(() => {
+      setAutoMode(prev => prev === 'poll' ? 'banter' : 'poll')
+    }, 5000)
+    return () => clearInterval(interval)
+  }, [hasInteracted])
 
   const refresh = useCallback(async () => {
     setLoading(true)
     try {
       const [publicList, userList] = await Promise.all([
         api.listEvents({ limit: 50, offset: 0 }),
-        sessionUserId ? api.listEvents({ limit: 50, offset: 0, creatorId: sessionUserId }) : Promise.resolve([])
+        sessionUserId
+          ? api.listEvents({ limit: 50, offset: 0, creatorId: sessionUserId })
+          : Promise.resolve([]),
       ])
       setEvents(publicList)
       setMyEvents(userList)
@@ -39,21 +274,26 @@ export function WorkspacePage() {
     }
   }, [sessionUserId])
 
-  useEffect(() => {
-    void refresh()
-  }, [refresh])
+  useEffect(() => { void refresh() }, [refresh])
 
-  async function onCreate(e: React.FormEvent) {
-    e.preventDefault()
-    if (!title.trim()) return
-
+  const handleCreate = async (body: CreateEventBody) => {
     setCreating(true)
     try {
-      const body: CreateEventBody = { title: title.trim(), type: 'poll' }
       const ev = await api.createEvent(body)
-      setTitle('')
-      toast.success('Event created successfully!')
-      navigate(`/events/${encodeURIComponent(ev.id)}`)
+      if (ev.type === 'banter') {
+        try {
+          await api.startEvent(ev.id)
+          ev.status = 'running'
+        } catch (e) {
+          console.error('Auto-start failed:', e)
+        }
+      }
+      toast.success(ev.type === 'banter' ? 'Room created!' : 'Poll created!')
+      if (ev.type === 'banter' && ev.joinSlug) {
+        navigate(`/room/${encodeURIComponent(ev.joinSlug)}`)
+      } else {
+        navigate(`/events/${encodeURIComponent(ev.id)}`)
+      }
     } catch (ex) {
       toast.error(ex instanceof Error ? ex.message : 'Create failed')
     } finally {
@@ -61,229 +301,207 @@ export function WorkspacePage() {
     }
   }
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'running':
-        return <Badge variant="default" className="bg-green-500 hover:bg-green-600">Live</Badge>
-      case 'completed':
-        return <Badge variant="secondary">Completed</Badge>
-      default:
-        return <Badge variant="outline">Draft</Badge>
-    }
+  const toggleMode = (mode: 'poll' | 'banter') => {
+    setHasInteracted(true)
+    setCreateMode(prev => prev === mode ? null : mode)
   }
 
+  const openEvents = events.filter(e => e.status === 'running')
+  const completedEvents = events.filter(e => e.status === 'completed')
+
   return (
-    <div className="space-y-10">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
-        <div className="space-y-2">
-          <h1 className="text-4xl font-extrabold tracking-tight">Your Dashboard</h1>
-          <p className="text-muted-foreground text-lg max-w-2xl">
-            Manage your polls and live events. Create interactive experiences and track results in real-time.
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Button variant="outline" size="icon" onClick={() => void refresh()} disabled={loading}>
-            <RefreshCcw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          </Button>
-        </div>
+    <div className="relative">
+      {/* Account Menu - Aligned with Content */}
+      <div className="absolute top-0 right-0 z-50">
+        {session && !session.user.isAnonymous ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="h-10 w-10 rounded-full p-0 shadow-sm border-2 border-primary/10 hover:border-primary/20 transition-all">
+                <Avatar className="h-full w-full">
+                  <AvatarImage src={session.user.image || ''} alt={session.user.name} />
+                  <AvatarFallback className="bg-primary/10 text-primary font-bold text-xs">
+                    {session.user.name?.slice(0, 2).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56" align="end">
+              <DropdownMenuLabel className="font-normal">
+                <div className="flex flex-col space-y-1">
+                  <p className="text-sm font-bold leading-none">{session.user.name}</p>
+                  <p className="text-xs leading-none text-muted-foreground">{session.user.email}</p>
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild className="cursor-pointer">
+                <Link to="/account" className="flex items-center">
+                  <Settings className="mr-2 h-4 w-4" /> Account Settings
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                className="text-destructive focus:text-destructive cursor-pointer"
+                onClick={() => authClient.signOut()}
+              >
+                <LogOut className="mr-2 h-4 w-4" /> Log out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          <div className="flex items-center gap-2 opacity-40 hover:opacity-100 transition-opacity">
+            <Button variant="ghost" size="sm" asChild className="text-[10px] uppercase tracking-wider">
+              <Link to="/login">Sign in</Link>
+            </Button>
+            <div className="h-4 w-[1px] bg-primary/20" />
+            <Button variant="ghost" size="sm" asChild className="text-[10px] uppercase tracking-wider text-muted-foreground">
+              <Link to="/register">Join</Link>
+            </Button>
+          </div>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Creation Column */}
-        <div className="lg:col-span-1">
-          <Card className="sticky top-24 shadow-md border-primary/10">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Plus className="h-5 w-5 text-primary" />
-                Create New
-              </CardTitle>
-              <CardDescription>Launch a new poll in seconds.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={onCreate} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="title">Event Title</Label>
-                  <Input
-                    id="title"
-                    placeholder="e.g., Weekly Team Feedback"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    required
-                  />
-                </div>
-                <Button type="submit" className="w-full" disabled={creating}>
-                  {creating ? 'Creating...' : 'Create Poll'}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-        </div>
+      {/* Hero Container */}
+      <div className="border-b pb-12 pt-16 mb-10">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          <HeroText />
 
-        {/* List Column */}
-        <div className="lg:col-span-2 space-y-8">
-          {/* My Events */}
-          {sessionUserId && (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between px-2">
-                <h2 className="text-xl font-bold flex items-center gap-2 text-primary">
-                  <LayoutGrid className="h-5 w-5" />
-                  My Events
-                </h2>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <span>{myEvents.length} total</span>
+          <div className="lg:pt-12 lg:pr-12" style={{ animation: 'fadeUp 0.5s ease both', animationDelay: '320ms' }}>
+            <div className="space-y-6 max-w-xl mx-auto lg:mx-0 lg:ml-auto">
+              <div className="relative">
+                {/* Show Alternating Active Option */}
+                <div className="flex flex-col gap-4">
+                  <div className="flex gap-4">
+                    <button
+                      onClick={() => toggleMode('poll')}
+                      className={cn(
+                        "flex-1 p-8 rounded-2xl border-4 transition-all text-left group relative overflow-hidden",
+                        (hasInteracted ? createMode === 'poll' : autoMode === 'poll')
+                          ? "border-primary bg-primary/5 shadow-xl scale-[1.02]"
+                          : "border-muted bg-muted/10 hover:border-primary/20 opacity-30"
+                      )}
+                    >
+                      <BarChart2 className="h-8 w-8 mb-4 text-primary/40" />
+                      <h3 className="text-xl font-black uppercase tracking-widest mb-1 text-primary/40">New Poll</h3>
+                      <p className="text-sm text-muted-foreground">Ask questions, get votes.</p>
+                      {(hasInteracted ? createMode === 'poll' : autoMode === 'poll') && (
+                        <div className="absolute top-4 right-4 h-2 w-2 rounded-full bg-primary animate-pulse" />
+                      )}
+                    </button>
+
+                    <button
+                      onClick={() => toggleMode('banter')}
+                      className={cn(
+                        "flex-1 p-8 rounded-2xl border-4 transition-all text-left group relative overflow-hidden",
+                        (hasInteracted ? createMode === 'banter' : autoMode === 'banter')
+                          ? "border-primary bg-primary/5 shadow-xl scale-[1.02]"
+                          : "border-muted bg-muted/10 hover:border-primary/20 opacity-30"
+                      )}
+                    >
+                      <MessageSquare className="h-8 w-8 mb-4 text-primary/40" />
+                      <h3 className="text-xl font-black uppercase tracking-widest mb-1 text-primary/40">Banter Room</h3>
+                      <p className="text-sm text-muted-foreground">Real-time chat & fight.</p>
+                      {(hasInteracted ? createMode === 'banter' : autoMode === 'banter') && (
+                        <div className="absolute top-4 right-4 h-2 w-2 rounded-full bg-primary animate-pulse" />
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Inline form appears when a mode is active */}
+                  {(hasInteracted && createMode) && (
+                    <div className="mt-4">
+                      <QuickCreateForm
+                        mode={createMode}
+                        onClose={() => setCreateMode(null)}
+                        onCreate={handleCreate}
+                        creating={creating}
+                      />
+                    </div>
+                  )}
+
+                  {!hasInteracted && (
+                    <p className="text-center text-[10px] font-mono uppercase tracking-[0.2em] text-muted-foreground animate-pulse mt-4">
+                      Click to choose your mode
+                    </p>
+                  )}
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
 
-              <div className="max-h-[300px] overflow-y-auto pr-2 space-y-4 custom-scrollbar">
-                {loading && myEvents.length === 0 ? (
-                  <div className="grid grid-cols-1 gap-4">
-                    <Card className="animate-pulse h-24 bg-muted/50 rounded-xl" />
-                  </div>
-                ) : myEvents.length === 0 ? (
-                  <Card className="border-dashed py-8">
-                    <CardContent className="flex flex-col items-center justify-center text-center space-y-2">
-                      <p className="text-sm text-muted-foreground">You haven't created any events yet.</p>
-                    </CardContent>
-                  </Card>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {myEvents.map((ev) => (
-                      <Card key={ev.id} className="group hover:shadow-lg hover:border-primary/20 transition-all cursor-pointer overflow-hidden border-primary/20 bg-primary/5 flex flex-col h-full">
-                        <Link to={`/events/${encodeURIComponent(ev.id)}`} className="flex flex-col flex-1">
-                          <CardHeader className="flex-1 pb-5">
-                            <div className="flex justify-between items-start mb-2">
-                              {getStatusBadge(ev.status)}
-                              <Badge variant="outline" className="text-[10px] uppercase tracking-wider">{ev.type}</Badge>
-                            </div>
-                            <CardTitle className="line-clamp-2 group-hover:text-primary transition-colors leading-snug text-base">
-                              {ev.title}
-                            </CardTitle>
-                          </CardHeader>
-                          <CardFooter className="pt-3 pb-3 border-t border-primary/10 bg-primary/5 text-[11px] text-muted-foreground flex justify-between mt-auto">
-                            <div className="flex items-center gap-1">
-                              <CalendarIcon className="h-3 w-3" />
-                              {new Date(ev.createdAt).toLocaleDateString()}
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <Clock className="h-3 w-3" />
-                              {ev.itemCount} items
-                            </div>
-                          </CardFooter>
-                        </Link>
-                      </Card>
-                    ))}
-                  </div>
-                )}
+        {/* Prototype note - Bottom Centered */}
+        <p
+          className="text-base font-medium text-muted-foreground/40 italic mt-16 text-center text-balance max-w-2xl mx-auto leading-relaxed"
+          style={{ animation: 'fadeUp 0.5s ease both', animationDelay: '500ms' }}
+        >
+          This is a prototype. You might ask why this behaves this way
+          and is confusing, but, who cares?
+        </p>
+      </div>
+
+      {/* Dashboard */}
+      <div className="space-y-12">
+        {/* My Events */}
+        {sessionUserId && (
+          <section>
+            <SectionLabel
+              icon={<Users className="h-4 w-4" />}
+              label="My Events"
+              count={myEvents.length}
+            />
+            {loading && myEvents.length === 0 ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+                {[1, 2, 3].map(i => (
+                  <div key={i} className="h-28 rounded-xl bg-muted/50 animate-pulse" />
+                ))}
+              </div>
+            ) : myEvents.length === 0 ? (
+              <EmptyState text="Nothing here yet. Create your first poll or banter room above." />
+            ) : (
+              <div className="max-h-[420px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-muted-foreground/20 hover:scrollbar-thumb-muted-foreground/40 transition-all">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pb-4">
+                  {myEvents.map(ev => <EventCard key={ev.id} ev={ev} />)}
+                </div>
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* Open / Live Events */}
+        <section>
+          <SectionLabel
+            icon={<Globe className="h-4 w-4" />}
+            label="Open Events"
+            count={openEvents.length}
+          />
+          {loading && events.length === 0 ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+              {[1, 2].map(i => <div key={i} className="h-28 rounded-xl bg-muted/50 animate-pulse" />)}
+            </div>
+          ) : openEvents.length === 0 ? (
+            <EmptyState text="No live events right now. Start one above!" />
+          ) : (
+            <div className="max-h-[420px] overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-muted-foreground/20 hover:scrollbar-thumb-muted-foreground/40 transition-all">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 pb-4">
+                {openEvents.map(ev => <EventCard key={ev.id} ev={ev} />)}
               </div>
             </div>
           )}
+        </section>
 
-          {/* Active Events */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between px-2">
-              <h2 className="text-xl font-bold flex items-center gap-2">
-                <LayoutGrid className="h-5 w-5 text-green-500" />
-                Active Events
-              </h2>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <ListFilter className="h-4 w-4" />
-                <span>{events.filter(e => e.status === 'running').length} running</span>
-              </div>
+        {/* Recent / Completed */}
+        {completedEvents.length > 0 && (
+          <section>
+            <SectionLabel
+              icon={<Zap className="h-4 w-4 text-muted-foreground" />}
+              label="Recently Completed"
+              count={completedEvents.length}
+            />
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 opacity-60">
+              {completedEvents.map(ev => <EventCard key={ev.id} ev={ev} />)}
             </div>
-
-            <div className="max-h-[500px] overflow-y-auto pr-2 space-y-4 custom-scrollbar">
-              {loading && events.length === 0 ? (
-                <div className="grid grid-cols-1 gap-4">
-                  {[1, 2].map((i) => (
-                    <Card key={i} className="animate-pulse h-32 bg-muted/50 rounded-xl" />
-                  ))}
-                </div>
-              ) : events.filter(e => e.status === 'running').length === 0 ? (
-                <Card className="border-dashed py-8">
-                  <CardContent className="flex flex-col items-center justify-center text-center space-y-2">
-                    <p className="text-sm text-muted-foreground">No active events found.</p>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {events.filter(e => e.status === 'running').map((ev) => (
-                    <Card key={ev.id} className="group hover:shadow-lg hover:border-primary/20 transition-all cursor-pointer overflow-hidden border-muted flex flex-col h-full">
-                      <Link to={`/events/${encodeURIComponent(ev.id)}`} className="flex flex-col flex-1">
-                        <CardHeader className="flex-1 pb-5">
-                          <div className="flex justify-between items-start mb-2">
-                            {getStatusBadge(ev.status)}
-                            <Badge variant="outline" className="text-[10px] uppercase tracking-wider">{ev.type}</Badge>
-                          </div>
-                          <CardTitle className="line-clamp-2 group-hover:text-primary transition-colors leading-snug text-base">
-                            {ev.title}
-                          </CardTitle>
-                        </CardHeader>
-                        <CardFooter className="pt-3 pb-3 border-t bg-muted/5 text-[11px] text-muted-foreground flex justify-between mt-auto">
-                          <div className="flex items-center gap-1">
-                            <CalendarIcon className="h-3 w-3" />
-                            {new Date(ev.createdAt).toLocaleDateString()}
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            {ev.itemCount} items
-                          </div>
-                        </CardFooter>
-                      </Link>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Completed Events */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between px-2">
-              <h2 className="text-xl font-bold flex items-center gap-2 text-muted-foreground">
-                <CheckCircle2 className="h-5 w-5" />
-                Recently Completed
-              </h2>
-            </div>
-
-            <div className="max-h-[500px] overflow-y-auto pr-2 space-y-4 custom-scrollbar">
-              {events.filter(e => e.status === 'completed').length === 0 ? (
-                <Card className="border-dashed py-8">
-                  <CardContent className="flex flex-col items-center justify-center text-center space-y-2">
-                    <p className="text-sm text-muted-foreground">No completed events found.</p>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {events.filter(e => e.status === 'completed').map((ev) => (
-                    <Card key={ev.id} className="group hover:shadow-md transition-all cursor-pointer overflow-hidden border-muted opacity-80 hover:opacity-100 flex flex-col h-full">
-                      <Link to={`/events/${encodeURIComponent(ev.id)}`} className="flex flex-col flex-1">
-                        <CardHeader className="flex-1 pb-5">
-                          <div className="flex justify-between items-start mb-2">
-                            {getStatusBadge(ev.status)}
-                            <Badge variant="outline" className="text-[10px] uppercase tracking-wider">{ev.type}</Badge>
-                          </div>
-                          <CardTitle className="line-clamp-2 group-hover:text-primary transition-colors leading-snug text-base">
-                            {ev.title}
-                          </CardTitle>
-                        </CardHeader>
-                        <CardFooter className="pt-3 pb-3 border-t bg-muted/5 text-[11px] text-muted-foreground flex justify-between mt-auto">
-                          <div className="flex items-center gap-1">
-                            <CalendarIcon className="h-3 w-3" />
-                            {new Date(ev.createdAt).toLocaleDateString()}
-                          </div>
-                          <div className="flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            {ev.itemCount} items
-                          </div>
-                        </CardFooter>
-                      </Link>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
+          </section>
+        )}
       </div>
     </div>
   )

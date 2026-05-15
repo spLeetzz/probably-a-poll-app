@@ -22,17 +22,20 @@ import {
   BarChart2,
   MessageSquare,
   Settings2,
+  Plus,
   ArrowLeft,
   Copy,
   Wifi,
   WifiOff,
   RefreshCcw,
+  Link as LinkIcon
 } from "lucide-react";
 import { toast } from "sonner";
 import { ParticipateTab } from "./event-detail/ParticipateTab";
 import { ResultsTab } from "./event-detail/ResultsTab";
 import { ManageTab } from "./event-detail/ManageTab";
 import { ParticipantsTab } from "./event-detail/ParticipantsTab";
+import { QuestionsTab } from "./event-detail/QuestionsTab";
 
 const EMPTY_ANALYTICS: Analytics = { totalResponses: 0, items: [] };
 
@@ -70,6 +73,9 @@ export function EventDetailPage() {
 
   const [activeTab, setActiveTab] = useState("participate");
   const [, setTabInitialized] = useState(false);
+  const [savingItems, setSavingItems] = useState<Set<string>>(new Set());
+  const debounceRefs = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+  const itemTextRefs = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   const uid = session?.user?.id;
   const isAuthenticated = Boolean(session?.user);
@@ -114,12 +120,24 @@ export function EventDetailPage() {
       }
 
       try {
-        const [ev, its] = await Promise.all([
+        const canSeeResults = true; // Optimization: Fetch in parallel and handle errors if unauthorized
+        
+        const [ev, its, ana, pts] = await Promise.all([
           api.getEvent(eventId),
           api.listItems(eventId),
+          api.getAnalytics(eventId).catch(() => EMPTY_ANALYTICS),
+          api.listParticipants(eventId).catch(() => []),
         ]);
+
         setEvent(ev);
         setItems(its);
+        setAnalytics(ana);
+        setParticipants(pts);
+
+        if (ev.type === 'banter' && ev.joinSlug) {
+          navigate(`/room/${encodeURIComponent(ev.joinSlug)}`, { replace: true });
+          return;
+        }
 
         setTabInitialized((prev) => {
           if (!prev) {
@@ -141,24 +159,6 @@ export function EventDetailPage() {
           }
           return next;
         });
-
-        const canSeeResults =
-          ev.resultsVisibility === "public" || uid === ev.creatorId;
-        if (canSeeResults) {
-          try {
-            setAnalytics(await api.getAnalytics(eventId));
-          } catch {
-            /* ignore */
-          }
-        }
-
-        if (ev.joinMode === "approval" && uid === ev.creatorId) {
-          try {
-            setParticipants(await api.listParticipants(eventId));
-          } catch {
-            /* ignore */
-          }
-        }
       } catch (e) {
         toast.error(e instanceof Error ? e.message : "Failed to load");
       } finally {
@@ -273,19 +273,34 @@ export function EventDetailPage() {
 
   const handleAddItem = async (text: string, mandatory: boolean) => {
     if (!eventId) return;
-    setBusy(true);
+    
+    // Optimistic update
+    const tempId = `temp-${Date.now()}`;
+    const newItem: ItemWithOptions = {
+      id: tempId,
+      eventId,
+      text,
+      order: items.length + 1,
+      isMandatory: mandatory,
+      mediaUrl: null,
+      correctAnswer: null,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      options: []
+    };
+    setItems(prev => [...prev, newItem]);
+
     try {
       await api.createItem(eventId, {
         text,
         order: items.length + 1,
         isMandatory: mandatory,
       });
-      toast.success("Question added.");
+      // Toast not needed for every background success if it's seamless
       await refresh(true);
     } catch (e) {
+      setItems(prev => prev.filter(it => it.id !== tempId));
       toast.error(e instanceof Error ? e.message : "Add failed");
-    } finally {
-      setBusy(false);
     }
   };
 
@@ -300,6 +315,18 @@ export function EventDetailPage() {
       toast.error(e instanceof Error ? e.message : "Delete failed");
     } finally {
       setBusy(false);
+    }
+  };
+
+  const handleUpdateItem = async (id: string, data: { text?: string; isMandatory?: boolean }) => {
+    if (!eventId) return;
+    try {
+      await api.updateItem(eventId, id, data);
+      setItems((prev) =>
+        prev.map((it) => (it.id === id ? { ...it, ...data } : it)),
+      );
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Update failed");
     }
   };
 
@@ -463,9 +490,19 @@ export function EventDetailPage() {
         </div>
         <div className='flex items-start justify-between gap-4'>
           <div className='min-w-0'>
-            <h1 className='text-3xl font-bold tracking-tight truncate'>
-              {event.title}
-            </h1>
+            <div className="flex items-center gap-2">
+              <h1 className='text-3xl font-bold tracking-tight truncate'>
+                {event.title}
+              </h1>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-6 w-6 opacity-20 hover:opacity-100 transition-opacity"
+                onClick={copyLink}
+              >
+                <LinkIcon className="h-3 w-3" />
+              </Button>
+            </div>
             {event.description && (
               <p className='text-muted-foreground mt-1'>{event.description}</p>
             )}
@@ -492,18 +529,23 @@ export function EventDetailPage() {
       </div>
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className='w-full'>
-          <TabsTrigger value='participate' className='flex-1 gap-1.5'>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
+        <TabsList className='w-full bg-transparent p-0 border-b border-white/5'>
+          <TabsTrigger value='participate' className='flex-1 gap-1.5 bg-transparent data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:border-b-2 data-[state=active]:border-white/20 rounded-none shadow-none opacity-50 data-[state=active]:opacity-100 transition-all'>
             <MessageSquare className='h-4 w-4' /> Participate
           </TabsTrigger>
-          <TabsTrigger value='results' className='flex-1 gap-1.5'>
-            <BarChart2 className='h-4 w-4' /> Results
+          <TabsTrigger value='analytics' className='flex-1 gap-1.5 bg-transparent data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:border-b-2 data-[state=active]:border-white/20 rounded-none shadow-none opacity-50 data-[state=active]:opacity-100 transition-all'>
+            <BarChart2 className='h-4 w-4' /> Analytics
           </TabsTrigger>
           {isCreator && (
-            <TabsTrigger value='manage' className='flex-1 gap-1.5'>
-              <Settings2 className='h-4 w-4' /> Manage
-            </TabsTrigger>
+            <>
+              <TabsTrigger value='questions' className='flex-1 gap-1.5 bg-transparent data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:border-b-2 data-[state=active]:border-white/20 rounded-none shadow-none opacity-50 data-[state=active]:opacity-100 transition-all'>
+                <Plus className='h-4 w-4' /> Questions
+              </TabsTrigger>
+              <TabsTrigger value='manage' className='flex-1 gap-1.5 bg-transparent data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:border-b-2 data-[state=active]:border-white/20 rounded-none shadow-none opacity-50 data-[state=active]:opacity-100 transition-all'>
+                <Settings2 className='h-4 w-4' /> Manage
+              </TabsTrigger>
+            </>
           )}
         </TabsList>
 
@@ -529,16 +571,58 @@ export function EventDetailPage() {
           />
         </TabsContent>
 
-        {/* Results tab always visible , content inside handles private/anon gating */}
-        <TabsContent value='results' className='mt-6'>
+        {/* Analytics tab always visible , content inside handles private/anon gating */}
+        <TabsContent value='analytics' className='mt-6'>
           <ResultsTab
             analytics={analytics}
             totalResponses={analytics.totalResponses}
             canViewResults={canViewResults}
             isPrivate={event.resultsVisibility === "private"}
             isAuthenticated={isAuthenticated && !isAnonymous}
+            eventStatus={event.status}
+            itemsCount={items.length}
+            busy={busy}
+            onStart={() =>
+              act(() => api.startEvent(eventId), "Event started!")
+            }
           />
         </TabsContent>
+
+        {isCreator && (
+          <TabsContent value='questions' className='mt-6'>
+            <QuestionsTab
+              items={items}
+              optionsByItem={optionsByItem}
+              isEditable={event.status === 'pending'}
+              busy={busy}
+              savingItems={savingItems}
+              onAddItem={() => handleAddItem("New Question", true)}
+              onDeleteItem={handleDeleteItem}
+              onUpdateItemText={(id, text) => {
+                if (itemTextRefs.current[id]) clearTimeout(itemTextRefs.current[id]);
+                setSavingItems(s => new Set(s).add(id));
+                itemTextRefs.current[id] = setTimeout(async () => {
+                  try { await handleUpdateItem(id, { text }); }
+                  finally { setSavingItems(s => { const n = new Set(s); n.delete(id); return n; }); }
+                }, 1000);
+              }}
+              onUpdateItemMandatory={async (id, m) => {
+                setSavingItems(s => new Set(s).add(id));
+                try { await handleUpdateItem(id, { isMandatory: m }); }
+                finally { setSavingItems(s => { const n = new Set(s); n.delete(id); return n; }); }
+              }}
+              onSaveOptions={(itemId, opts) => {
+                setOptionsByItem(prev => ({ ...prev, [itemId]: opts }));
+                if (debounceRefs.current[itemId]) clearTimeout(debounceRefs.current[itemId]);
+                setSavingItems(s => new Set(s).add(itemId));
+                debounceRefs.current[itemId] = setTimeout(async () => {
+                  try { if (opts.length === 0 || opts.length >= 2) await handleSaveOptions(itemId, opts); }
+                  finally { setSavingItems(s => { const n = new Set(s); n.delete(itemId); return n; }); }
+                }, 1500);
+              }}
+            />
+          </TabsContent>
+        )}
 
         {event.joinMode === "approval" && isCreator && (
           <TabsContent value='participants' className='mt-6'>
@@ -555,8 +639,6 @@ export function EventDetailPage() {
             <ManageTab
               key={event.id}
               event={event}
-              items={items}
-              optionsByItem={optionsByItem}
               busy={busy}
               onSaveMeta={handleSaveMeta}
               onStart={() =>
@@ -569,10 +651,6 @@ export function EventDetailPage() {
                 act(() => api.publishEvent(eventId), "Event published!")
               }
               onDelete={handleDelete}
-              onAddItem={handleAddItem}
-              onDeleteItem={handleDeleteItem}
-              onSaveOptions={handleSaveOptions}
-              onOptionsByItemChange={setOptionsByItem}
             />
           </TabsContent>
         )}

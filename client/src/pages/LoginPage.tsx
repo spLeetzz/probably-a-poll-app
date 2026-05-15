@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
-import { BarChart, Mail, Lock, ChevronLeft } from 'lucide-react'
+import { BarChart, Mail, LockKeyhole, ChevronLeft } from 'lucide-react'
 import { toast } from 'sonner'
 
 export function LoginPage() {
@@ -85,7 +85,7 @@ export function LoginPage() {
                 <Link to="/forgot-password" title="Forgot password" className="text-xs text-primary hover:underline">Forgot password?</Link>
               </div>
               <div className="relative">
-                <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <LockKeyhole className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input 
                   id="password" 
                   type="password" 

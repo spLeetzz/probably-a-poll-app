@@ -1,4 +1,4 @@
-const EVENT_TYPES = ["poll"] as const;
+const EVENT_TYPES = ["poll", "banter"] as const;
 const JOIN_MODES = ["open", "approval"] as const;
 const EVENT_STATUSES = ["pending", "running", "completed"] as const;
 const RESULTS_VISIBILITIES = ["public", "private"] as const;
@@ -23,6 +23,8 @@ export const createEventBodySchema = {
     authOnly: { type: "boolean" },
     resultsVisibility: { type: "string", enum: RESULTS_VISIBILITIES },
     expiresAt: { type: "string", format: "date-time" },
+    isPrivate: { type: "boolean" },
+    isAnonymous: { type: "boolean" },
   },
 } as const;
 
@@ -65,6 +67,8 @@ export interface CreateEventBody {
   authOnly?: boolean;
   resultsVisibility?: ResultsVisibility;
   expiresAt?: string;
+  isPrivate?: boolean;
+  isAnonymous?: boolean;
 }
 
 export interface UpdateEventBody {
@@ -86,4 +90,58 @@ export interface ListEventsQuery {
 
 export interface EventParams {
   id: string;
+}
+
+// --- Banter-specific schemas & types ---
+
+export const slugParamsSchema = {
+  type: "object",
+  required: ["joinSlug"],
+  properties: {
+    joinSlug: { type: "string", minLength: 1, maxLength: 64 },
+  },
+} as const;
+
+export const joinBanterBodySchema = {
+  type: "object",
+  required: ["displayName"],
+  additionalProperties: false,
+  properties: {
+    displayName: { type: "string", minLength: 1, maxLength: 100 },
+  },
+} as const;
+
+export const sendMessageBodySchema = {
+  type: "object",
+  required: ["content"],
+  additionalProperties: false,
+  properties: {
+    content: { type: "string", minLength: 1, maxLength: 2000 },
+  },
+} as const;
+
+export const messagesQuerySchema = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    cursor: { type: "string" },
+    limit: { type: "integer", minimum: 1, maximum: 100, default: 50 },
+  },
+} as const;
+
+export interface SlugParams {
+  joinSlug: string;
+}
+
+export interface JoinBanterBody {
+  displayName: string;
+}
+
+export interface SendMessageBody {
+  content: string;
+}
+
+export interface MessagesQuery {
+  cursor?: string;
+  limit: number;
 }

@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
-import { BarChart, Mail, Lock, User, ChevronLeft } from 'lucide-react'
+import { BarChart, Mail, LockKeyhole, User, ChevronLeft } from 'lucide-react'
 import { toast } from 'sonner'
 
 export function RegisterPage() {
@@ -101,7 +101,7 @@ export function RegisterPage() {
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
               <div className="relative">
-                <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <LockKeyhole className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input 
                   id="password" 
                   type="password" 

@@ -1,6 +1,6 @@
 import type { FastifyRequest, FastifyReply } from "fastify";
 import * as repo from "./responses.repo.js";
-import { getEventById } from "../events/events.repo.js";
+import { getEventByIdInternal } from "../events/events.repo.js";
 import { listItemsWithOptions } from "../items/items.repo.js";
 import { getIo } from "../socket/index.js";
 import { NO_SESSION_MESSAGE } from "../middleware/auth-messages.js";
@@ -8,7 +8,7 @@ import type { RespondParams, RespondBody, ParticipantParams, UpdateParticipantBo
 
 export async function handleRespond(req: FastifyRequest, reply: FastifyReply) {
   const { eventId } = req.params as RespondParams;
-  const event = await getEventById(eventId);
+  const event = await getEventByIdInternal(eventId);
   if (!event) throw req.server.httpErrors.notFound("Event not found");
 
   if (!req.user?.id) {
@@ -98,7 +98,7 @@ async function handlePollResponse(reply: FastifyReply, event: any, answers: any,
 export async function handleGetAnalytics(req: FastifyRequest, reply: FastifyReply) {
   const { eventId } = req.params as RespondParams;
 
-  const event = await getEventById(eventId);
+  const event = await getEventByIdInternal(eventId);
   if (!event) throw req.server.httpErrors.notFound("Event not found");
 
   if (event.resultsVisibility === "private") {
@@ -115,7 +115,7 @@ export async function handleGetAnalytics(req: FastifyRequest, reply: FastifyRepl
 export async function handleListParticipants(req: FastifyRequest, reply: FastifyReply) {
   const { eventId } = req.params as RespondParams;
 
-  const event = await getEventById(eventId);
+  const event = await getEventByIdInternal(eventId);
   if (!event) throw req.server.httpErrors.notFound("Event not found");
 
   if (!req.user?.id || req.user.id !== event.creatorId) {
@@ -130,7 +130,7 @@ export async function handleUpdateParticipant(req: FastifyRequest, reply: Fastif
   const { eventId, participantId } = req.params as ParticipantParams;
   const { status } = req.body as UpdateParticipantBody;
 
-  const event = await getEventById(eventId);
+  const event = await getEventByIdInternal(eventId);
   if (!event) throw req.server.httpErrors.notFound("Event not found");
 
   if (!req.user?.id || req.user.id !== event.creatorId) {

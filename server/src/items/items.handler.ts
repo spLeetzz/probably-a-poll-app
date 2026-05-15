@@ -1,6 +1,6 @@
 import type { FastifyRequest, FastifyReply } from "fastify";
 import * as repo from "./items.repo.js";
-import { getEventById } from "../events/events.repo.js";
+import { getEventByIdInternal, requireBanterParticipant } from "../events/events.repo.js";
 import type {
   ItemEventParams,
   ItemParams,
@@ -9,12 +9,14 @@ import type {
 } from "./items.schema.js";
 
 async function requireEvent(req: FastifyRequest, eventId: string) {
-  const event = await getEventById(eventId);
+  const event = await getEventByIdInternal(eventId);
   if (!event) throw req.server.httpErrors.notFound("Event not found");
   return event;
 }
 
-function requirePending(req: FastifyRequest, status: string) {
+/** Banter rooms can add/edit items while running (live polls). Polls lock on start. */
+function requireEditable(req: FastifyRequest, type: string, status: string) {
+  if (type === "banter") return; // banter rooms allow live item edits
   if (status !== "pending") {
     throw req.server.httpErrors.badRequest("Items can only be modified when event is pending");
   }
@@ -31,8 +33,14 @@ export async function handleCreateItem(req: FastifyRequest, reply: FastifyReply)
   const body = req.body as CreateItemBody;
 
   const event = await requireEvent(req, eventId);
-  requirePending(req, event.status);
-  requireCreator(req, event.creatorId);
+  requireEditable(req, event.type, event.status);
+
+  if (event.type === "banter") {
+    // Any participant can add a question to a banter room
+    await requireBanterParticipant(req, event.id);
+  } else {
+    requireCreator(req, event.creatorId);
+  }
 
   const item = await repo.createItem(eventId, body);
   return reply.status(201).send({ data: item });
@@ -57,7 +65,7 @@ export async function handleUpdateItem(req: FastifyRequest, reply: FastifyReply)
   const body = req.body as UpdateItemBody;
 
   const event = await requireEvent(req, eventId);
-  requirePending(req, event.status);
+  requireEditable(req, event.type, event.status);
   requireCreator(req, event.creatorId);
 
   const item = await repo.updateItem(itemId, body);
@@ -69,7 +77,7 @@ export async function handleDeleteItem(req: FastifyRequest, reply: FastifyReply)
   const { eventId, itemId } = req.params as ItemParams;
 
   const event = await requireEvent(req, eventId);
-  requirePending(req, event.status);
+  requireEditable(req, event.type, event.status);
   requireCreator(req, event.creatorId);
 
   const item = await repo.deleteItem(itemId);

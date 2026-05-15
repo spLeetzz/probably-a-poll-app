@@ -8,7 +8,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
-import { MessageSquare, BarChart2, Lock, LogIn } from "lucide-react";
+import { MessageSquare, BarChart2, LockKeyhole, LogIn, Play } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { Analytics } from "../../api/events-api";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,10 @@ interface Props {
   canViewResults: boolean;
   isPrivate: boolean;
   isAuthenticated: boolean;
+  eventStatus: string;
+  itemsCount: number;
+  onStart: () => void;
+  busy: boolean;
 }
 
 function groupTextResponses(
@@ -51,13 +55,17 @@ export function ResultsTab({
   canViewResults,
   isPrivate,
   isAuthenticated,
+  eventStatus,
+  itemsCount,
+  onStart,
+  busy,
 }: Props) {
   // Private results , non-creator sees lock card
   if (isPrivate && !canViewResults) {
     return (
       <Card>
         <CardContent className='flex flex-col items-center justify-center py-16 gap-4'>
-          <Lock className='h-10 w-10 text-muted-foreground' />
+          <LockKeyhole className='h-10 w-10 text-muted-foreground' />
           <div className='text-center space-y-1'>
             <p className='font-semibold text-lg'>Results are private</p>
             <p className='text-sm text-muted-foreground'>
@@ -81,9 +89,9 @@ export function ResultsTab({
               You need an account to see results for this event.
             </p>
           </div>
-          <Button asChild className='gap-2'>
+          <Button asChild className='h-12 px-8'>
             <Link to='/login'>
-              <LogIn className='h-4 w-4' /> Sign In
+              <LogIn className='h-5 w-5' /> SIGN IN
             </Link>
           </Button>
         </CardContent>
@@ -92,6 +100,30 @@ export function ResultsTab({
   }
   return (
     <div className='space-y-6'>
+      {eventStatus === "pending" && (
+        <Card className="bg-amber-500/10 border-amber-500/20">
+          <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Play className="h-5 w-5 text-amber-600" /> Event not started
+            </CardTitle>
+            <CardDescription>
+              Analytics will appear here once you start the event and collect responses.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {itemsCount > 0 ? (
+              <Button onClick={onStart} disabled={busy} size="lg" className="gap-2 bg-amber-600 hover:bg-amber-700 text-white font-black uppercase tracking-widest px-10 py-6 text-lg shadow-lg border-b-2 border-amber-800 active:border-b-0 active:translate-y-1 transition-all">
+                <Play className="h-5 w-5 fill-current" /> START EVENT
+              </Button>
+            ) : (
+              <p className="text-sm text-muted-foreground font-black italic uppercase tracking-widest bg-muted/20 p-4 rounded-lg border-2 border-dashed">
+                Add at least one question in the Manage tab to enable participation.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       <Card className='bg-primary/5 border-primary/20'>
         <CardHeader className='pb-2'>
           <CardDescription className='text-primary text-xs uppercase tracking-widest font-medium'>

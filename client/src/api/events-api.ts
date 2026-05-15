@@ -1,6 +1,6 @@
 import { apiFetch, readApiData } from '../lib/api-fetch'
 
-export type EventType = 'poll'
+export type EventType = 'poll' | 'banter'
 export type EventStatus = 'pending' | 'running' | 'completed'
 export type JoinMode = 'open' | 'approval'
 export type ResultsVisibility = 'public' | 'private'
@@ -21,10 +21,14 @@ export interface Event {
   updatedAt: string
   itemCount: number
   isPublished: boolean
+  joinSlug: string | null
+  isAnonymous: boolean
   participant?: {
     id: string
     status: ParticipantStatus
     joinedAt: string
+    sessionToken?: string
+    displayName?: string
   }
 }
 
@@ -54,6 +58,21 @@ export interface ItemWithOptions extends Item {
   options: OptionRow[]
 }
 
+export interface BanterMessage {
+  id: string
+  content: string
+  participantId: string
+  displayName: string
+  createdAt: string
+}
+
+export interface BanterJoinResponse {
+  participantId: string
+  sessionToken: string
+  displayName: string
+  alreadyJoined: boolean
+}
+
 export interface CreateEventBody {
   title: string
   description?: string
@@ -62,6 +81,8 @@ export interface CreateEventBody {
   authOnly?: boolean
   resultsVisibility?: ResultsVisibility
   expiresAt?: string
+  isPrivate?: boolean
+  isAnonymous?: boolean
 }
 
 export interface UpdateEventBody {
@@ -189,10 +210,12 @@ export async function listItems(eventId: string): Promise<ItemWithOptions[]> {
   return readApiData<ItemWithOptions[]>(res)
 }
 
-export async function createItem(eventId: string, body: CreateItemBody): Promise<Item> {
+export async function createItem(eventId: string, body: CreateItemBody, sessionToken?: string): Promise<Item> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  if (sessionToken) headers['x-session-token'] = sessionToken
   const res = await apiFetch(`/events/${encodeURIComponent(eventId)}/items`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify(body),
   })
   return readApiData<Item>(res)
@@ -218,12 +241,20 @@ export async function deleteItem(eventId: string, itemId: string): Promise<{ del
   return readApiData(res)
 }
 
-export async function setItemOptions(eventId: string, itemId: string, options: OptionInput[]): Promise<OptionRow[]> {
+export async function setItemOptions(
+  eventId: string,
+  itemId: string,
+  options: OptionInput[],
+  sessionToken?: string
+): Promise<OptionRow[]> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  if (sessionToken) headers['x-session-token'] = sessionToken
+
   const res = await apiFetch(
     `/events/${encodeURIComponent(eventId)}/items/${encodeURIComponent(itemId)}/options`,
     {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify({ options }),
     },
   )
@@ -271,4 +302,69 @@ export async function updateParticipantStatus(
 export async function searchDeezerArtists(query: string): Promise<unknown[]> {
   const res = await apiFetch(`/proxy/deezer/search/artist?q=${encodeURIComponent(query)}`)
   return readApiData<unknown[]>(res)
+}
+
+/** Fetch a banter event by its joinSlug. Returns event + participantCount + participant. */
+export async function getBanterRoom(joinSlug: string): Promise<Event & { participantCount: number }> {
+  const res = await apiFetch(`/events/slug/${encodeURIComponent(joinSlug)}`)
+  return readApiData<Event & { participantCount: number }>(res)
+}
+
+/** Join a banter room by eventId. Returns sessionToken. */
+export async function joinBanterRoom(eventId: string, displayName: string): Promise<BanterJoinResponse> {
+  const res = await apiFetch(`/events/${encodeURIComponent(eventId)}/join`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ displayName }),
+  })
+  return readApiData<BanterJoinResponse>(res)
+}
+
+/** Reset the joinSlug for a banter room (creator only). */
+export async function resetBanterLink(eventId: string): Promise<{ joinSlug: string }> {
+  const res = await apiFetch(`/events/${encodeURIComponent(eventId)}/reset-link`, { method: 'POST' })
+  return readApiData<{ joinSlug: string }>(res)
+}
+
+/** Fetch paginated message history for a banter event. */
+export async function listBanterMessages(
+  eventId: string,
+  params?: { cursor?: string; limit?: number },
+): Promise<{ messages: BanterMessage[]; nextCursor: string | null }> {
+  const res = await apiFetch(`/events/${encodeURIComponent(eventId)}/messages${qs(params || {})}`)
+  return readApiData<{ messages: BanterMessage[]; nextCursor: string | null }>(res)
+}
+
+/** Send a message via REST fallback (WebSocket is preferred). */
+export async function sendBanterMessage(
+  eventId: string,
+  content: string,
+  sessionToken: string,
+): Promise<BanterMessage> {
+  const res = await apiFetch(`/events/${encodeURIComponent(eventId)}/messages`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-session-token': sessionToken,
+    },
+    body: JSON.stringify({ content }),
+  })
+  return readApiData<BanterMessage>(res)
+}
+
+/** Vote on a specific option in a banter room (per-item, no batch). */
+export async function banterVote(
+  eventId: string,
+  itemId: string,
+  optionId: string,
+  sessionToken?: string,
+): Promise<{ itemId: string; optionId: string; newVoteCount: number }> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  if (sessionToken) headers['x-session-token'] = sessionToken
+  const res = await apiFetch(`/events/${encodeURIComponent(eventId)}/vote`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ itemId, optionId }),
+  })
+  return readApiData(res)
 }

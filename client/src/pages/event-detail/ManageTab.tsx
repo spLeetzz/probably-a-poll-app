@@ -11,6 +11,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Select,
   SelectContent,
@@ -18,9 +22,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Popover,
   PopoverContent,
@@ -46,7 +47,10 @@ import {
   CloudUpload,
   Calendar as CalendarIcon,
   Clock,
-  Lock,
+  LockKeyhole,
+  Settings2,
+  MessageSquare,
+  BarChart2,
 } from "lucide-react";
 import { format, addMinutes, isValid } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -60,8 +64,6 @@ import type {
 
 interface Props {
   event: Event;
-  items: ItemWithOptions[];
-  optionsByItem: Record<string, OptionInput[]>;
   busy: boolean;
   onSaveMeta: (data: {
     title: string;
@@ -75,26 +77,16 @@ interface Props {
   onComplete: () => void;
   onPublish: () => void;
   onDelete: () => void;
-  onAddItem: (text: string, mandatory: boolean) => Promise<void>;
-  onDeleteItem: (id: string) => Promise<void>;
-  onSaveOptions: (itemId: string, opts: OptionInput[]) => Promise<void>;
-  onOptionsByItemChange: (val: Record<string, OptionInput[]>) => void;
 }
 
 export function ManageTab({
   event,
-  items,
-  optionsByItem,
   busy,
   onSaveMeta,
   onStart,
   onComplete,
   onPublish,
   onDelete,
-  onAddItem,
-  onDeleteItem,
-  onSaveOptions,
-  onOptionsByItemChange,
 }: Props) {
   const [title, setTitle] = useState(event.title);
   const [description, setDescription] = useState(event.description ?? "");
@@ -107,8 +99,6 @@ export function ManageTab({
   const [expiresAt, setExpiresAt] = useState<Date | undefined>(
     event.expiresAt ? new Date(event.expiresAt) : undefined,
   );
-  const [newItemText, setNewItemText] = useState("");
-  const [newItemMandatory, setNewItemMandatory] = useState(true);
 
   const isEditable = event.status === "pending";
 
@@ -158,12 +148,6 @@ export function ManageTab({
     onSaveMeta,
   ]);
 
-  // Track which items have pending autosave
-  const [savingItems, setSavingItems] = useState<Set<string>>(new Set());
-  const debounceRefs = useRef<Record<string, ReturnType<typeof setTimeout>>>(
-    {},
-  );
-
   const toggleExpiry = (checked: boolean) => {
     setHasExpiry(checked);
     if (checked && !expiresAt) setExpiresAt(addMinutes(new Date(), 30));
@@ -171,412 +155,267 @@ export function ManageTab({
 
   const safeDate = expiresAt && isValid(expiresAt) ? expiresAt : undefined;
 
-  const handleAddItem = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newItemText.trim()) return;
-    await onAddItem(newItemText.trim(), newItemMandatory);
-    setNewItemText("");
-  };
-
-  // Debounced auto-save options , fires 1.5s after user stops typing
-  const handleOptionChange = useCallback(
-    (itemId: string, opts: OptionInput[]) => {
-      onOptionsByItemChange({ ...optionsByItem, [itemId]: opts });
-
-      // Clear previous timer
-      if (debounceRefs.current[itemId])
-        clearTimeout(debounceRefs.current[itemId]);
-
-      setSavingItems((s) => new Set(s).add(itemId));
-      debounceRefs.current[itemId] = setTimeout(async () => {
-        try {
-          if (opts.length === 0 || opts.length >= 2) {
-            await onSaveOptions(itemId, opts);
-          }
-        } finally {
-          setSavingItems((s) => {
-            const n = new Set(s);
-            n.delete(itemId);
-            return n;
-          });
-        }
-      }, 1500);
-    },
-    [optionsByItem, onOptionsByItemChange, onSaveOptions],
-  );
-
-  // Cleanup timers on unmount
-  useEffect(() => {
-    return () => {
-      Object.values(debounceRefs.current).forEach(clearTimeout);
-    };
-  }, []);
-
   return (
-    <div className='space-y-6'>
-      {/* Lifecycle */}
-      <Card>
-        <CardHeader>
-          <CardTitle className='text-base'>Lifecycle</CardTitle>
-          <CardDescription>Control the event state.</CardDescription>
-        </CardHeader>
-        <CardContent className='flex flex-wrap gap-3'>
-          {event.status === "pending" && (
-            <Button onClick={onStart} disabled={busy} className='gap-2'>
-              <Play className='h-4 w-4' /> Start Event
-            </Button>
-          )}
-          {event.status === "running" && (
-            <Button
-              onClick={onComplete}
-              variant='secondary'
-              disabled={busy}
-              className='gap-2'
-            >
-              <Pause className='h-4 w-4' /> Complete Event
-            </Button>
-          )}
-          {!event.isPublished && (
-            <Button
-              onClick={onPublish}
-              variant='outline'
-              disabled={busy}
-              className='gap-2'
-            >
-              <CloudUpload className='h-4 w-4' /> Publish
-            </Button>
-          )}
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
+
+    <div className='max-w-2xl mx-auto space-y-6'>
+      {/* Locked Alert */}
+      {!isEditable && (
+        <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4 flex items-start gap-3">
+           <LockKeyhole className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
+           <div>
+             <p className="text-sm font-bold text-amber-600">Event is Locked</p>
+             <p className="text-xs text-amber-600/80">Settings cannot be edited while the event is {event.status}.</p>
+           </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* Lifecycle */}
+        <Card className={cn(!isEditable && "opacity-80 bg-muted/20")}>
+          <CardHeader>
+            <CardTitle className='text-base font-semibold flex items-center gap-2'>
+              <Play className="h-4 w-4 text-primary" /> Status Control
+            </CardTitle>
+            <CardDescription>Manage the lifecycle of your event.</CardDescription>
+          </CardHeader>
+          <CardContent className='flex flex-col gap-3'>
+            {event.status === "pending" && (
+              <Button onClick={onStart} disabled={busy} className='w-full gap-2 justify-start'>
+                <Play className='h-4 w-4' /> Start Event
+              </Button>
+            )}
+            {event.status === "running" && (
               <Button
-                variant='destructive'
+                onClick={onComplete}
+                variant='secondary'
                 disabled={busy}
-                className='gap-2 ml-auto'
+                className='w-full gap-2 justify-start'
               >
-                <Trash2 className='h-4 w-4' /> Delete
+                <Pause className='h-4 w-4' /> Complete Event
               </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Delete event?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This is permanent and cannot be undone.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={onDelete}>Delete</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </CardContent>
-      </Card>
+            )}
+            {event.status === "completed" && !event.isPublished && (
+              <Button
+                onClick={onPublish}
+                variant='default'
+                disabled={busy}
+                className='w-full gap-2 justify-start bg-green-600 hover:bg-green-700'
+              >
+                <CloudUpload className='h-4 w-4' /> Publish Results
+              </Button>
+            )}
 
-      {/* Settings */}
-      <Card>
-        <CardHeader>
-          <CardTitle className='text-base'>Settings</CardTitle>
-        </CardHeader>
-        <CardContent className='space-y-5'>
-          <div className='space-y-1.5'>
-            <Label>Title</Label>
-            <Input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              disabled={!isEditable}
-            />
-          </div>
-          <div className='space-y-1.5'>
-            <Label>Description</Label>
-            <Textarea
-              rows={3}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className='resize-none'
-              disabled={!isEditable}
-            />
-          </div>
-          <div className='grid grid-cols-1 gap-4'>
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  variant='ghost'
+                  disabled={busy}
+                  className='w-full gap-2 justify-start text-destructive hover:bg-destructive/10 hover:text-destructive'
+                >
+                  <Trash2 className='h-4 w-4' /> Delete Event
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete event?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This is permanent and cannot be undone. All responses will be lost.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={onDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </CardContent>
+        </Card>
+
+        {/* Settings */}
+        <Card className={cn(!isEditable && "opacity-70 bg-muted/10 border-dashed")}>
+          <CardHeader>
+            <CardTitle className='text-base font-semibold flex items-center gap-2'>
+              <Settings2 className="h-4 w-4 text-primary" /> Settings
+            </CardTitle>
+          </CardHeader>
+          <CardContent className='space-y-5'>
             <div className='space-y-1.5'>
-              <Label>Results Visibility</Label>
-              <Select
-                value={resultsVisibility}
-                onValueChange={(v) =>
-                  setResultsVisibility(v as ResultsVisibility)
-                }
-                disabled={!isEditable}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value='public'>Public</SelectItem>
-                  <SelectItem value='private'>
-                    Private (Creator only)
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className='flex items-center justify-between'>
-            <Label>Require Authentication</Label>
-            <Switch
-              checked={authOnly}
-              onCheckedChange={setAuthOnly}
-              disabled={!isEditable}
-            />
-          </div>
-          <Separator />
-          <div className='space-y-3'>
-            <div className='flex items-center justify-between'>
-              <Label>Enable Expiry</Label>
-              <Switch
-                checked={hasExpiry}
-                onCheckedChange={toggleExpiry}
-                disabled={!isEditable}
-              />
-            </div>
-            {hasExpiry && (
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant='outline'
-                    className={cn(
-                      "w-full justify-start gap-2",
-                      !safeDate && "text-muted-foreground",
-                    )}
-                  >
-                    <CalendarIcon className='h-4 w-4' />
-                    {safeDate ? format(safeDate, "PPP p") : "Pick date & time"}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className='w-auto p-4 space-y-4' align='start'>
-                  <Calendar
-                    mode='single'
-                    selected={safeDate}
-                    onSelect={(d) => {
-                      if (!d) return;
-                      const next = new Date(d);
-                      if (safeDate)
-                        next.setHours(
-                          safeDate.getHours(),
-                          safeDate.getMinutes(),
-                        );
-                      setExpiresAt(next);
-                    }}
-                    initialFocus
-                  />
-                  <div className='space-y-1.5'>
-                    <Label className='text-xs uppercase tracking-wider text-muted-foreground'>
-                      Time (24h)
-                    </Label>
-                    <div className='flex items-center gap-2'>
-                      <Clock className='h-4 w-4 text-muted-foreground' />
-                      <Select
-                        value={
-                          safeDate
-                            ? safeDate.getHours().toString().padStart(2, "0")
-                            : "12"
-                        }
-                        onValueChange={(h) => {
-                          const d = new Date(expiresAt ?? new Date());
-                          d.setHours(parseInt(h));
-                          setExpiresAt(d);
-                        }}
-                      >
-                        <SelectTrigger className='w-20'>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent className='max-h-48'>
-                          {Array.from({ length: 24 }, (_, i) => (
-                            <SelectItem
-                              key={i}
-                              value={i.toString().padStart(2, "0")}
-                            >
-                              {i.toString().padStart(2, "0")}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <span className='font-bold'>:</span>
-                      <Select
-                        value={
-                          safeDate
-                            ? safeDate.getMinutes().toString().padStart(2, "0")
-                            : "00"
-                        }
-                        onValueChange={(m) => {
-                          const d = new Date(expiresAt ?? new Date());
-                          d.setMinutes(parseInt(m));
-                          setExpiresAt(d);
-                        }}
-                      >
-                        <SelectTrigger className='w-20'>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent className='max-h-48'>
-                          {Array.from({ length: 60 }, (_, i) => (
-                            <SelectItem
-                              key={i}
-                              value={i.toString().padStart(2, "0")}
-                            >
-                              {i.toString().padStart(2, "0")}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                </PopoverContent>
-              </Popover>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Questions */}
-      <Card>
-        <CardHeader>
-          <div className='flex items-center justify-between'>
-            <div>
-              <CardTitle className='text-base'>Questions</CardTitle>
-              <CardDescription className='mt-1'>
-                {isEditable
-                  ? "Add and configure questions. Leave options empty for open text answers."
-                  : "Questions are locked while the event is running."}
-              </CardDescription>
-            </div>
-            {!isEditable && (
-              <Badge variant='secondary' className='gap-1'>
-                <Lock className='h-3 w-3' /> Locked
-              </Badge>
-            )}
-          </div>
-        </CardHeader>
-        <CardContent className='space-y-6'>
-          {/* Add question , only when pending */}
-          {isEditable && (
-            <form onSubmit={handleAddItem} className='flex gap-2'>
+              <Label className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2">
+                Title {!isEditable && <LockKeyhole className="h-3 w-3" />}
+              </Label>
               <Input
-                placeholder='New question text…'
-                value={newItemText}
-                onChange={(e) => setNewItemText(e.target.value)}
-                className='flex-1'
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                disabled={!isEditable}
+                placeholder="Event title"
+                className={cn(!isEditable && "bg-transparent border-none px-0 h-auto font-medium disabled:opacity-100")}
               />
-              <div className='flex items-center gap-2 shrink-0'>
-                <Checkbox
-                  id='mand'
-                  checked={newItemMandatory}
-                  onCheckedChange={(v) => setNewItemMandatory(!!v)}
-                />
-                <Label htmlFor='mand' className='text-sm cursor-pointer'>
-                  Required
-                </Label>
+            </div>
+            <div className='space-y-1.5'>
+              <Label className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2">
+                Description {!isEditable && <LockKeyhole className="h-3 w-3" />}
+              </Label>
+              <Textarea
+                rows={3}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                className={cn('resize-none', !isEditable && "bg-transparent border-none px-0 h-auto disabled:opacity-100")}
+                disabled={!isEditable}
+                placeholder="Optional description"
+              />
+            </div>
+            <div className='space-y-3'>
+              <Label className="text-xs font-bold uppercase text-muted-foreground">Results Visibility</Label>
+              <div className="flex bg-muted p-1 rounded-lg border shadow-inner">
+                <button
+                  type="button"
+                  disabled={!isEditable}
+                  onClick={() => setResultsVisibility('public')}
+                  className={cn(
+                    "flex-1 flex items-center justify-center gap-2 py-1.5 text-xs font-semibold rounded-md transition-all active:scale-95",
+                    resultsVisibility === 'public' 
+                      ? "bg-zinc-600 text-white shadow-sm" 
+                      : "text-muted-foreground hover:bg-muted"
+                  )}
+                >
+                  <BarChart2 className="h-3.5 w-3.5" /> Public
+                </button>
+                <button
+                  type="button"
+                  disabled={!isEditable}
+                  onClick={() => setResultsVisibility('private')}
+                  className={cn(
+                    "flex-1 flex items-center justify-center gap-2 py-1.5 text-xs font-semibold rounded-md transition-all active:scale-95",
+                    resultsVisibility === 'private' 
+                      ? "bg-zinc-600 text-white shadow-sm" 
+                      : "text-muted-foreground hover:bg-muted"
+                  )}
+                >
+                  <LockKeyhole className="h-3.5 w-3.5" /> Private
+                </button>
               </div>
-              <Button type='submit' disabled={busy} size='icon'>
-                <Plus className='h-4 w-4' />
-              </Button>
-            </form>
-          )}
-
-          {items.length === 0 && (
-            <p className='text-sm text-muted-foreground text-center py-4'>
-              No questions yet.
-            </p>
-          )}
-
-          {items.map((item) => {
-            const opts = optionsByItem[item.id] ?? [];
-            const isSaving = savingItems.has(item.id);
-            return (
-              <div key={item.id} className='border rounded-lg p-4 space-y-3'>
-                <div className='flex items-center justify-between gap-2'>
-                  <p className='font-medium text-sm'>{item.text}</p>
-                  <div className='flex items-center gap-2'>
-                    {item.isMandatory && (
-                      <Badge variant='outline' className='text-[10px]'>
-                        Required
-                      </Badge>
-                    )}
-                    {isSaving && (
-                      <span className='text-[10px] text-muted-foreground animate-pulse'>
-                        Saving…
-                      </span>
-                    )}
-                    {isEditable && (
-                      <Button
-                        variant='ghost'
-                        size='icon'
-                        className='h-7 w-7 text-destructive hover:text-destructive'
-                        onClick={() => onDeleteItem(item.id)}
-                        disabled={busy}
-                      >
-                        <Trash2 className='h-3.5 w-3.5' />
-                      </Button>
-                    )}
-                  </div>
-                </div>
-
-                {/* Options editor , locked when event is running */}
-                {isEditable ? (
-                  <div className='space-y-2'>
-                    {opts.map((opt, i) => (
-                      <div key={i} className='flex gap-2'>
-                        <Input
-                          value={opt.text}
-                          placeholder={`Option ${i + 1}`}
-                          onChange={(e) => {
-                            const next = opts.map((o, j) =>
-                              j === i ? { ...o, text: e.target.value } : o,
-                            );
-                            handleOptionChange(item.id, next);
-                          }}
-                          className='h-8 text-sm'
-                        />
-                        <Button
-                          variant='ghost'
-                          size='icon'
-                          className='h-8 w-8 shrink-0 text-muted-foreground'
-                          onClick={() => {
-                            const next = opts
-                              .filter((_, j) => j !== i)
-                              .map((o, j) => ({ ...o, order: j + 1 }));
-                            handleOptionChange(item.id, next);
-                          }}
-                        >
-                          <Trash2 className='h-3.5 w-3.5' />
-                        </Button>
-                      </div>
-                    ))}
+            </div>
+            <div className='flex items-center justify-between'>
+              <Label className="text-sm font-medium">Require Login</Label>
+              <Switch
+                checked={authOnly}
+                onCheckedChange={setAuthOnly}
+                disabled={!isEditable}
+              />
+            </div>
+            <Separator />
+            <div className='space-y-3'>
+              <div className='flex items-center justify-between'>
+                <Label className="text-sm font-medium">Auto-Expire</Label>
+                <Switch
+                  checked={hasExpiry}
+                  onCheckedChange={toggleExpiry}
+                  disabled={!isEditable}
+                />
+              </div>
+              {hasExpiry && (
+                <Popover>
+                  <PopoverTrigger asChild>
                     <Button
                       variant='outline'
-                      size='sm'
-                      className='gap-1 text-xs'
-                      onClick={() => {
-                        const next = [
-                          ...opts,
-                          { text: "", order: opts.length + 1 },
-                        ];
-                        handleOptionChange(item.id, next);
-                      }}
+                      disabled={!isEditable}
+                      className={cn(
+                        "w-full justify-start gap-2 h-9",
+                        !safeDate && "text-muted-foreground",
+                        !isEditable && "border-none bg-muted/30 h-8"
+                      )}
                     >
-                      <Plus className='h-3 w-3' /> Add Option
+                      <CalendarIcon className='h-4 w-4' />
+                      {safeDate ? format(safeDate, "PPP p") : "Pick date & time"}
                     </Button>
-                  </div>
-                ) : (
-                  <div className='text-xs text-muted-foreground space-y-1 pl-1'>
-                    {opts.length > 0 ? (
-                      opts.map((o, i) => <p key={i}>• {o.text || "(empty)"}</p>)
-                    ) : (
-                      <p className='italic'>Open text answer</p>
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </CardContent>
-      </Card>
+                  </PopoverTrigger>
+                  <PopoverContent className='w-auto p-4 space-y-4 bg-[#1c1c1b] border-4 border-primary shadow-[0_0_50px_rgba(0,0,0,1)]' align='start'>
+                    <Calendar
+                      mode='single'
+                      selected={safeDate}
+                      className="rounded-md border bg-muted/20"
+                      onSelect={(d) => {
+                        if (!d) return;
+                        const next = new Date(d);
+                        if (safeDate)
+                          next.setHours(
+                            safeDate.getHours(),
+                            safeDate.getMinutes(),
+                          );
+                        setExpiresAt(next);
+                      }}
+                      initialFocus
+                    />
+                    <div className='space-y-4 p-5 rounded-xl border-4 border-primary bg-[#2a2a28] shadow-[0_0_30px_rgba(0,0,0,0.8)]'>
+                      <Label className='text-sm font-semibold text-primary flex items-center gap-2'>
+                        <Clock className="h-4 w-4" /> Finalize Time (24h)
+                      </Label>
+                      <div className='flex items-center justify-center gap-3'>
+                        <Select
+                          value={
+                            safeDate
+                              ? safeDate.getHours().toString().padStart(2, "0")
+                              : "12"
+                          }
+                          onValueChange={(h) => {
+                            const d = new Date(expiresAt ?? new Date());
+                            d.setHours(parseInt(h));
+                            setExpiresAt(d);
+                          }}
+                        >
+                          <SelectTrigger className='w-20 h-10 text-base font-medium bg-card border-2 border-primary/40'>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className='max-h-48 border-4'>
+                            {Array.from({ length: 24 }, (_, i) => (
+                              <SelectItem
+                                key={i}
+                                value={i.toString().padStart(2, "0")}
+                                className="font-medium"
+                              >
+                                {i.toString().padStart(2, "0")}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <span className='font-semibold text-2xl text-primary/60'>:</span>
+                        <Select
+                          value={
+                            safeDate
+                              ? safeDate.getMinutes().toString().padStart(2, "0")
+                              : "00"
+                          }
+                          onValueChange={(m) => {
+                            const d = new Date(expiresAt ?? new Date());
+                            d.setMinutes(parseInt(m));
+                            setExpiresAt(d);
+                          }}
+                        >
+                          <SelectTrigger className='w-20 h-10 text-base font-medium bg-card border-2 border-primary/40'>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent className='max-h-48 border-4'>
+                            {Array.from({ length: 60 }, (_, i) => (
+                              <SelectItem
+                                key={i}
+                                value={i.toString().padStart(2, "0")}
+                                className="font-medium"
+                              >
+                                {i.toString().padStart(2, "0")}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
+

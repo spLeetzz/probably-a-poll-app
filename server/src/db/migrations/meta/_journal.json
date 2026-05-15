@@ -8,6 +8,13 @@
       "when": 1778801071145,
       "tag": "0000_cynical_thing",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1778851993994,
+      "tag": "0001_add_banter",
+      "breakpoints": true
     }
   ]
 }

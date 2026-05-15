@@ -2,7 +2,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Textarea } from '@/components/ui/textarea'
-import { CheckCircle2, Clock, Lock, LogIn } from 'lucide-react'
+import { CheckCircle2, Clock, LockKeyhole, LogIn } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import type { ItemWithOptions } from '../../api/events-api'
@@ -95,7 +95,7 @@ export function ParticipateTab({
       return (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-16 gap-3">
-            <Lock className="h-10 w-10 text-destructive" />
+            <LockKeyhole className="h-10 w-10 text-destructive" />
             <p className="font-semibold text-lg text-destructive">Response rejected</p>
             <p className="text-sm text-muted-foreground text-center max-w-sm">
               The event creator has declined your participation in this event.
@@ -136,8 +136,8 @@ export function ParticipateTab({
           <Card key={item.id}>
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between gap-2">
-                <CardTitle className="text-base font-semibold leading-snug">
-                  {idx + 1}. {item.text}
+                <CardTitle className="text-base font-bold leading-snug">
+                  {items.length > 1 && `${idx + 1}. `}{item.text}
                 </CardTitle>
                 {item.isMandatory && (
                   <Badge variant="outline" className="text-[10px] shrink-0">Required</Badge>

@@ -1,6 +1,6 @@
 # Probably a Poll App
 
-Real-time polling platform. Anonymous or authenticated participants. Live vote sync via WebSocket. Approval-gated events. Analytics per question.
+Real-time polling platform for settling scores and making decisions. Create standard polls or jump into a Banter room for live chat and instant voting. Anonymous or authenticated participants. Live vote sync via WebSocket. Approval-gated events. Analytics per question.
 
 ```
 poll-app/
@@ -11,6 +11,14 @@ poll-app/
 ---
 
 ## Features
+
+### Banter Rooms
+
+Ever had an argument in a WhatsApp group and couldn't settle it? Create a Banter room.
+- **Live Chat:** Chat on the same platform where you poll.
+- **Instant Voting:** High-frequency, one-click voting on items.
+- **Anonymous Polling:** No one knows who voted for what, keeping the peace in the group.
+- **Ephemeral & Fast:** Share a link, join with a name, and start settling the score.
 
 ### Events
 
@@ -138,7 +146,8 @@ List events.
 | Param | Type | Description |
 |---|---|---|
 | `creatorId` | string | Filter by creator |
-| `status` | `pending\|running\|completed` | Filter by status |
+| `status` | `pending | running | completed` | Filter by status |
+| `type` | `poll | banter` | Filter by event type |
 | `limit` | integer | Max results (default 20, max 100) |
 | `offset` | integer | Pagination offset |
 
@@ -211,7 +220,35 @@ Transition `running → completed`. Creator only.
 
 #### `POST /events/:id/publish`
 
-Transition `completed → published`. Makes results public. Creator only.
+Transition `completed -> published`. Makes results public. Creator only.
+
+---
+
+### Banter Participation
+
+#### `POST /events/:id/join`
+
+Join a banter room. Returns a `sessionToken`.
+**Body**
+```json
+{ "displayName": "Aditya" }
+```
+
+---
+
+#### `POST /events/:id/vote`
+
+One-click vote for an item. Requires `x-session-token` header.
+**Body**
+```json
+{ "optionId": "uuid" }
+```
+
+---
+
+#### `GET /events/:id/messages`
+
+Fetch chat history for a banter room. Requires `x-session-token` header.
 
 ---
 
@@ -386,6 +423,23 @@ Connect to `ws://localhost:4000` with credentials (session cookie must be presen
 | `response:count`             | `{ totalResponses }`                                 | Total response count updated |
 | `participant:status_updated` | `{ participantId, status }`                          | Approval status changed      |
 | `error`                      | `{ message }`                                        | Something went wrong         |
+
+#### Namespace: `/banter`
+
+Handles high-frequency banter room interactions. Requires `x-session-token` for authorization.
+
+| Event       | Payload       | Description                      |
+| ----------- | ------------- | -------------------------------- |
+| `join_room` | `{ joinSlug, sessionToken }` | Join banter room |
+| `send_message` | `{ content }` | Send a chat message |
+
+**Server -> Client**
+| Event       | Payload       | Description                      |
+| ----------- | ------------- | -------------------------------- |
+| `room_joined` | `{ eventId }` | Confirms room join |
+| `new_message` | `{ id, content, displayName, createdAt }` | New chat message |
+| `new_item` | `{ id, text, options }` | New poll item added to room |
+| `answer_recorded` | `{ optionId, newVoteCount }` | Real-time vote update |
 
 ---
 

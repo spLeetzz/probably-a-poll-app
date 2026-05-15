@@ -16,7 +16,7 @@ import { sql } from "drizzle-orm";
 import { user } from "./auth-schema.js";
 
 export const eventStatus = pgEnum("event_status", ["pending", "running", "completed"]);
-export const eventType = pgEnum("event_type", ["poll"]);
+export const eventType = pgEnum("event_type", ["poll", "banter"]);
 export const joinMode = pgEnum("join_mode", ["open", "approval"]);
 export const participantStatus = pgEnum("participant_status", ["pending", "approved", "rejected"]);
 export const resultsVisibility = pgEnum("results_visibility", ["public", "private"]);
@@ -85,6 +85,8 @@ export const events = pgTable(
       .notNull(),
     itemCount: integer("item_count").default(0).notNull(),
     isPublished: boolean("is_published").default(false).notNull(),
+    joinSlug: varchar("join_slug", { length: 64 }),
+    isAnonymous: boolean("is_anonymous").default(false).notNull(),
   },
   (table) => [
     index("events_creator_id_idx").using(
@@ -100,6 +102,7 @@ export const events = pgTable(
       foreignColumns: [user.id],
       name: "events_creator_id_user_id_fk",
     }).onDelete("set null"),
+    unique("events_join_slug_unique").on(table.joinSlug),
   ],
 );
 
@@ -207,6 +210,35 @@ export const answers = pgTable(
       columns: [table.participantId],
       foreignColumns: [participants.id],
       name: "answers_participant_id_fkey",
+    }).onDelete("cascade"),
+  ],
+);
+
+export const messages = pgTable(
+  "messages",
+  {
+    id: uuid().defaultRandom().primaryKey().notNull(),
+    eventId: text("event_id").notNull(),
+    participantId: uuid("participant_id").notNull(),
+    content: varchar({ length: 2000 }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true, mode: "string" })
+      .defaultNow()
+      .notNull(),
+  },
+  (table) => [
+    index("messages_event_id_idx").using(
+      "btree",
+      table.eventId.asc().nullsLast().op("text_ops"),
+    ),
+    foreignKey({
+      columns: [table.eventId],
+      foreignColumns: [events.id],
+      name: "messages_event_id_fkey",
+    }).onDelete("cascade"),
+    foreignKey({
+      columns: [table.participantId],
+      foreignColumns: [participants.id],
+      name: "messages_participant_id_fkey",
     }).onDelete("cascade"),
   ],
 );
