@@ -6,14 +6,33 @@ import { toNodeHandler } from "better-auth/node";
 import { setupSocket } from "./socket/index.js";
 
 const server = createServer(async (req, res) => {
-  // better-auth owns its routes
   if (req.url?.startsWith("/api/auth")) {
-    console.log("auth origin:", req.headers.origin);
-    console.log("auth host:", req.headers.host);
+    const origin = req.headers.origin || "";
+    const allowed = [process.env.FRONTEND_URL, "http://localhost:3000"].filter(
+      Boolean,
+    );
+
+    if (allowed.includes(origin)) {
+      res.setHeader("Access-Control-Allow-Origin", origin);
+      res.setHeader("Access-Control-Allow-Credentials", "true");
+      res.setHeader(
+        "Access-Control-Allow-Methods",
+        "GET,POST,PUT,PATCH,DELETE,OPTIONS",
+      );
+      res.setHeader(
+        "Access-Control-Allow-Headers",
+        "Content-Type, Authorization",
+      );
+    }
+
+    if (req.method === "OPTIONS") {
+      res.writeHead(204);
+      res.end();
+      return;
+    }
+
     return toNodeHandler(auth)(req, res);
   }
-
-  // Fastify handles everything else
   app.routing(req, res);
 });
 
