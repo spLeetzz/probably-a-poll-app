@@ -8,6 +8,8 @@ import { setupSocket } from "./socket/index.js";
 const server = createServer(async (req, res) => {
   // better-auth owns its routes
   if (req.url?.startsWith("/api/auth")) {
+    console.log("auth origin:", req.headers.origin);
+    console.log("auth host:", req.headers.host);
     return toNodeHandler(auth)(req, res);
   }
 
