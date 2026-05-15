@@ -10,6 +10,7 @@ import optionsRoutes from "./options/options.routes.js";
 import responsesRoutes from "./responses/responses.routes.js";
 import proxyRoutes from "./proxy/proxy.routes.js";
 import cors from "@fastify/cors";
+import { ALLOWED_ORIGINS } from "./main.js";
 
 const app = Fastify({ logger: true });
 
@@ -31,7 +32,7 @@ await app.register(sensible);
 await app.register(cookie);
 
 await app.register(cors, {
-  origin: process.env.FRONTEND_URL || "http://localhost:3000",
+  origin: ALLOWED_ORIGINS,
   credentials: true,
 });
 

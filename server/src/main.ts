@@ -5,32 +5,23 @@ import app from "./app.js";
 import { toNodeHandler } from "better-auth/node";
 import { setupSocket } from "./socket/index.js";
 
+export const ALLOWED_ORIGINS = [
+  process.env.FRONTEND_URL,
+  "http://localhost:3000",
+].filter(Boolean) as string[];
+
 const server = createServer(async (req, res) => {
   if (req.url?.startsWith("/api/auth")) {
     const origin = req.headers.origin || "";
-    const allowed = [process.env.FRONTEND_URL, "http://localhost:3000"].filter(
-      Boolean,
-    );
-
-    if (allowed.includes(origin)) {
+    if (ALLOWED_ORIGINS.includes(origin)) {
       res.setHeader("Access-Control-Allow-Origin", origin);
       res.setHeader("Access-Control-Allow-Credentials", "true");
-      res.setHeader(
-        "Access-Control-Allow-Methods",
-        "GET,POST,PUT,PATCH,DELETE,OPTIONS",
-      );
-      res.setHeader(
-        "Access-Control-Allow-Headers",
-        "Content-Type, Authorization",
-      );
     }
-
     if (req.method === "OPTIONS") {
-      res.writeHead(204);
-      res.end();
+      res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+      res.writeHead(204).end();
       return;
     }
-
     return toNodeHandler(auth)(req, res);
   }
   app.routing(req, res);

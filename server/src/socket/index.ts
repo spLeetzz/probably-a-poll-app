@@ -4,6 +4,7 @@ import { auth } from "../auth/index.js";
 import { db } from "../db/index.js";
 import { events } from "../db/schema.js";
 import { eq } from "drizzle-orm";
+import { ALLOWED_ORIGINS } from "../main.js";
 
 export interface ClientToServerEvents {
   "join:room": (payload: { eventId: string }) => void;
@@ -39,13 +40,11 @@ export type IOServer = SocketIO.Server<
 let io: IOServer;
 
 export function setupSocket(server: HttpServer): IOServer {
-  io = new SocketIO.Server<
-    ClientToServerEvents,
-    ServerToClientEvents,
-    Record<string, never>,
-    SocketData
-  >(server, {
-    cors: { origin: "*", credentials: true },
+  io = new SocketIO.Server(server, {
+    cors: {
+      origin: ALLOWED_ORIGINS,
+      credentials: true,
+    },
   });
 
   io.use(async (socket, next) => {
