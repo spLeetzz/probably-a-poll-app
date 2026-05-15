@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
 import {
   BarChart2, MessageSquare, ArrowRight,
-  Zap, Globe, Users, Calendar as CalendarIcon, LogOut, User as UserIcon, Settings,
+  Zap, Globe, Users, Calendar as CalendarIcon, LogOut, Settings,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
@@ -70,7 +70,7 @@ function QuickCreateForm({ mode, onClose, onCreate, creating }: QuickCreateFormP
   const [title, setTitle] = useState('')
   const [isPrivate, setIsPrivate] = useState(false)
   const [isAnonymous, setIsAnonymous] = useState(false)
-  const [requireLogin, setRequireLogin] = useState(false)
+  const [requireLogin, ] = useState(false)
   const [privateResults, setPrivateResults] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 

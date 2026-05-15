@@ -5,11 +5,10 @@ import * as api from '../api/events-api'
 import { authClient } from '../lib/auth-client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { Label } from '@/components/ui/label'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { 
   Send, 
   Users, 
@@ -34,7 +33,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { formatDistanceToNow } from 'date-fns'
 import { ManageTab } from './event-detail/ManageTab'
 import { BanterItemCard } from '@/components/BanterItemCard'
-import { InlinePollCreator } from '@/components/inline-poll-creator'
 
 interface BanterServerToClient {
   new_message: (msg: api.BanterMessage) => void
@@ -171,7 +169,6 @@ export function BanterRoomPage() {
   const [participant, setParticipant] = useState<api.BanterJoinResponse | null>(null)
   const [items, setItems] = useState<api.ItemWithOptions[]>([])
   const [activeTab, setActiveTab] = useState('chat')
-  const [optionsByItem, setOptionsByItem] = useState<Record<string, api.OptionInput[]>>({})
   const [liveVoteCounts, setLiveVoteCounts] = useState<Record<string, number>>({})
 
   const isCreator = session?.user?.id && event?.creatorId === session.user.id
@@ -201,11 +198,6 @@ export function BanterRoomPage() {
         try {
           const itsData = await api.listItems(data.id)
           setItems(itsData)
-          const optMap: Record<string, api.OptionInput[]> = {}
-          for (const it of itsData) {
-            optMap[it.id] = it.options.map(o => ({ id: o.id, text: o.text, order: o.order }))
-          }
-          setOptionsByItem(optMap)
         } catch { /* polls tab will just show empty */ }
       }
       void loadExtras()
@@ -309,6 +301,8 @@ export function BanterRoomPage() {
       return
     }
 
+    if (!event) return
+
     setJoining(true)
     try {
       const res = await api.joinBanterRoom(event.id, displayName)
@@ -360,70 +354,6 @@ export function BanterRoomPage() {
 
 
   const [busy, setBusy] = useState(false)
-
-  const handleAddItem = async (text: string, mandatory: boolean) => {
-    if (!event) return
-    setBusy(true)
-    try {
-      await api.createItem(event.id, { text, order: items.length + 1, isMandatory: mandatory }, participant?.sessionToken)
-      toast.success('Question added')
-      const its = await api.listItems(event.id)
-      setItems(its)
-    } catch (e) {
-      toast.error('Failed to add question')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const handleCreatePoll = async (text: string, mandatory: boolean, options: string[]) => {
-    if (!event) return
-    setBusy(true)
-    try {
-      const newItem = await api.createItem(event.id, { text, order: items.length + 1, isMandatory: mandatory }, participant?.sessionToken)
-      if (options.length > 0) {
-        const optionInputs = options.map((opt, i) => ({ text: opt, order: i + 1 }))
-        await api.setItemOptions(event.id, newItem.id, optionInputs, participant?.sessionToken)
-      }
-      toast.success(options.length > 0 ? 'Poll added' : 'Question added')
-      const its = await api.listItems(event.id)
-      setItems(its)
-    } catch (e) {
-      toast.error('Failed to add poll')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const handleDeleteItem = async (id: string) => {
-    if (!event) return
-    setBusy(true)
-    try {
-      await api.deleteItem(event.id, id)
-      toast.success('Deleted')
-      const its = await api.listItems(event.id)
-      setItems(its)
-    } catch (e) {
-      toast.error('Delete failed')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const handleSaveOptions = async (itemId: string, opts: api.OptionInput[]) => {
-    if (!event) return
-    setBusy(true)
-    try {
-      await api.setItemOptions(event.id, itemId, opts, participant?.sessionToken)
-      toast.success('Options saved')
-      const its = await api.listItems(event.id)
-      setItems(its)
-    } catch (e) {
-      toast.error('Save failed')
-    } finally {
-      setBusy(false)
-    }
-  }
 
   const handleSaveMeta = async (data: any) => {
     if (!event || !joinSlug) return
@@ -607,8 +537,7 @@ export function BanterRoomPage() {
 
           {/* Polls Column */}
           <div className="lg:col-span-5 flex flex-col min-h-0 overflow-auto">
-             <div className="space-y-6 pb-6">
-                <InlinePollCreator onAdd={handleCreatePoll} busy={busy} />
+              <div className="space-y-6 pb-6">
                 <div className="space-y-4">
                   <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Active Questions</h2>
                   {items.length === 0 ? (
@@ -665,10 +594,12 @@ export function BanterRoomPage() {
               />
             </TabsContent>
 
-            <TabsContent value="polls" className="flex-1 overflow-auto mt-2 space-y-6 pb-6">
-              <InlinePollCreator onAdd={handleCreatePoll} busy={busy} />
-              <div className="space-y-4">
-                <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Active Questions</h2>
+            <TabsContent value="polls" className="flex-1 overflow-auto mt-2 px-1">
+              <div className="space-y-6 pb-20">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground/60">Poll Items</h3>
+                  <Badge variant="secondary" className="bg-primary/10 text-primary border-none">{items.length}</Badge>
+                </div>
                 {items.length === 0 ? (
                   <EmptyPollsState />
                 ) : (
@@ -688,22 +619,15 @@ export function BanterRoomPage() {
             </TabsContent>
 
             {isCreator && (
-              <TabsContent value="manage" className="flex-1 overflow-auto mt-2">
+              <TabsContent value="manage" className="flex-1 overflow-auto mt-2 px-1">
                 <ManageTab
                   event={event}
-                  eventType="banter"
-                  items={items}
-                  optionsByItem={optionsByItem}
                   busy={busy}
                   onSaveMeta={handleSaveMeta}
                   onStart={() => api.startEvent(event.id).then(ev => setEvent({ ...ev, participantCount: event.participantCount }))}
                   onComplete={() => api.completeEvent(event.id).then(ev => setEvent({ ...ev, participantCount: event.participantCount }))}
                   onPublish={() => api.publishEvent(event.id).then(ev => setEvent({ ...ev, participantCount: event.participantCount }))}
                   onDelete={() => api.deleteEvent(event.id).then(() => navigate('/'))}
-                  onAddItem={handleAddItem}
-                  onDeleteItem={handleDeleteItem}
-                  onSaveOptions={handleSaveOptions}
-                  onOptionsByItemChange={setOptionsByItem}
                 />
               </TabsContent>
             )}

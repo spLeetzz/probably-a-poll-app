@@ -120,8 +120,6 @@ export function EventDetailPage() {
       }
 
       try {
-        const canSeeResults = true; // Optimization: Fetch in parallel and handle errors if unauthorized
-        
         const [ev, its, ana, pts] = await Promise.all([
           api.getEvent(eventId),
           api.listItems(eventId),

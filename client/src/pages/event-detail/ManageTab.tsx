@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -11,10 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Checkbox } from "@/components/ui/checkbox";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Select,
   SelectContent,
@@ -40,7 +37,6 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import {
-  Plus,
   Trash2,
   Play,
   Pause,
@@ -49,17 +45,14 @@ import {
   Clock,
   LockKeyhole,
   Settings2,
-  MessageSquare,
   BarChart2,
 } from "lucide-react";
 import { format, addMinutes, isValid } from "date-fns";
 import { cn } from "@/lib/utils";
 import type {
   Event,
-  ItemWithOptions,
   JoinMode,
   ResultsVisibility,
-  OptionInput,
 } from "../../api/events-api";
 
 interface Props {

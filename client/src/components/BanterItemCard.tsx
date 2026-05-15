@@ -1,5 +1,4 @@
-import { useEffect, useState } from 'react'
-import { Button } from '@/components/ui/button'
+import { useState } from 'react'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Loader2, CheckCircle2, MessageSquare, BarChart2 } from 'lucide-react'
