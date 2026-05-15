@@ -6,6 +6,7 @@ import path from "path";
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   const target = env.VITE_POLL_API_TARGET || "http://localhost:4000";
+  console.log(target)
 
   return {
     plugins: [tailwindcss(), react()],
