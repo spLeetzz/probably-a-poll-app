@@ -64,8 +64,11 @@ export async function listEvents(query: ListEventsQuery) {
     // Creator sees all their own events
     conditions.push(eq(events.creatorId, query.creatorId));
   } else {
-    // Public feed: show non-slug events (polls) AND all banter rooms
-    conditions.push(or(isNull(events.joinSlug), eq(events.type, "banter")));
+    // Public feed: show non-slug events (polls) AND banter rooms that are NOT anonymous (private)
+    conditions.push(or(
+      isNull(events.joinSlug), 
+      and(eq(events.type, "banter"), eq(events.isAnonymous, false))
+    ));
   }
 
   if (query.type) conditions.push(eq(events.type, query.type));

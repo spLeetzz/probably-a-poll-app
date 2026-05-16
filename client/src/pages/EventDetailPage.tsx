@@ -120,11 +120,22 @@ export function EventDetailPage() {
       }
 
       try {
-        const [ev, its, ana, pts] = await Promise.all([
+        const [ev, its] = await Promise.all([
           api.getEvent(eventId),
           api.listItems(eventId),
-          api.getAnalytics(eventId).catch(() => EMPTY_ANALYTICS),
-          api.listParticipants(eventId).catch(() => []),
+        ]);
+
+        const isEventCreator = Boolean(uid && uid === ev.creatorId);
+        
+        let canViewAna = false;
+        if (isEventCreator) canViewAna = true;
+        else if (ev.resultsVisibility === "public") {
+           canViewAna = !(ev.authOnly && (!isAuthenticated || isAnonymous));
+        }
+
+        const [ana, pts] = await Promise.all([
+          canViewAna ? api.getAnalytics(eventId).catch(() => EMPTY_ANALYTICS) : Promise.resolve(EMPTY_ANALYTICS),
+          isEventCreator ? api.listParticipants(eventId).catch(() => []) : Promise.resolve([]),
         ]);
 
         setEvent(ev);
@@ -181,11 +192,11 @@ export function EventDetailPage() {
         prev.map((it) =>
           it.id === p.itemId
             ? {
-                ...it,
-                options: it.options.map((o) =>
-                  o.id === p.optionId ? { ...o, voteCount: p.newVoteCount } : o,
-                ),
-              }
+              ...it,
+              options: it.options.map((o) =>
+                o.id === p.optionId ? { ...o, voteCount: p.newVoteCount } : o,
+              ),
+            }
             : it,
         ),
       );
@@ -195,13 +206,13 @@ export function EventDetailPage() {
         items: prev.items.map((row) =>
           row.itemId === p.itemId
             ? {
-                ...row,
-                options: row.options.map((o) =>
-                  o.optionId === p.optionId
-                    ? { ...o, voteCount: p.newVoteCount }
-                    : o,
-                ),
-              }
+              ...row,
+              options: row.options.map((o) =>
+                o.optionId === p.optionId
+                  ? { ...o, voteCount: p.newVoteCount }
+                  : o,
+              ),
+            }
             : row,
         ),
       }));
@@ -271,7 +282,7 @@ export function EventDetailPage() {
 
   const handleAddItem = async (text: string, mandatory: boolean) => {
     if (!eventId) return;
-    
+
     // Optimistic update
     const tempId = `temp-${Date.now()}`;
     const newItem: ItemWithOptions = {
@@ -461,7 +472,7 @@ export function EventDetailPage() {
   }
 
   return (
-    <div className='max-w-4xl mx-auto space-y-6'>
+    <div className='max-w-6xl mx-auto space-y-6'>
       {/* Header */}
       <div className='space-y-3'>
         <div className='flex items-center gap-3'>
@@ -476,11 +487,11 @@ export function EventDetailPage() {
               {event.type}
             </Badge>
             {liveStatus === "live" ? (
-              <span className='flex items-center gap-1 text-xs text-green-600 font-medium ml-auto'>
+              <span className='flex items-center gap-1 text-sm text-green-600 font-medium ml-auto'>
                 <Wifi className='h-3 w-3' /> Live
               </span>
             ) : (
-              <span className='flex items-center gap-1 text-xs text-muted-foreground ml-auto'>
+              <span className='flex items-center gap-1 text-sm text-muted-foreground ml-auto'>
                 <WifiOff className='h-3 w-3' /> Offline
               </span>
             )}
@@ -489,12 +500,12 @@ export function EventDetailPage() {
         <div className='flex items-start justify-between gap-4'>
           <div className='min-w-0'>
             <div className="flex items-center gap-2">
-              <h1 className='text-3xl font-bold tracking-tight truncate'>
+              <h1 className='text-4xl font-bold tracking-tight truncate'>
                 {event.title}
               </h1>
-              <Button 
-                variant="ghost" 
-                size="icon" 
+              <Button
+                variant="ghost"
+                size="icon"
                 className="h-6 w-6 opacity-20 hover:opacity-100 transition-opacity"
                 onClick={copyLink}
               >

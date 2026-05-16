@@ -75,7 +75,7 @@ export function QuestionsTab({
                     <div className="flex items-center gap-2">
                        <span className="text-xs font-bold text-muted-foreground bg-muted px-2 py-0.5 rounded">Q{index + 1}</span>
                        {isSaving && (
-                        <span className='text-[10px] text-primary animate-pulse font-medium'>
+                        <span className='text-[8px] text-primary animate-pulse font-medium'>
                           Saving changes…
                         </span>
                       )}
@@ -106,7 +106,7 @@ export function QuestionsTab({
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between border-t pt-4">
                   <div className="flex items-center gap-3">
-                    <Label className="text-[10px] font-bold uppercase text-muted-foreground tracking-wider">Response Type</Label>
+                    <Label className="text-[8px] font-bold uppercase text-muted-foreground tracking-wider">Response Type</Label>
                     <div className="flex bg-muted p-1 rounded-lg border shadow-inner">
                       <button
                         type="button"

@@ -9,6 +9,8 @@ import {
 export interface BanterClientToServer {
   join_room: (payload: { joinSlug: string; sessionToken: string }) => void;
   send_message: (payload: { content: string }) => void;
+  broadcast_item: (payload: { item: Record<string, unknown> }) => void;
+  broadcast_text_reply: (payload: { itemId: string; text: string }) => void;
 }
 
 export interface BanterServerToClient {
@@ -24,6 +26,7 @@ export interface BanterServerToClient {
     participantId: string;
   }) => void;
   new_item: (payload: Record<string, unknown>) => void;
+  new_text_reply: (payload: { itemId: string; text: string }) => void;
   answer_recorded: (payload: Record<string, unknown>) => void;
   room_joined: (payload: { eventId: string }) => void;
   presence_update: (payload: { count: number }) => void;
@@ -121,6 +124,20 @@ export function setupBanterNamespace(nsp: BanterNamespace) {
       } catch {
         socket.emit("error", { message: "Failed to send message" });
       }
+    });
+
+    socket.on("broadcast_item", ({ item }) => {
+      const { eventId } = socket.data;
+      if (!eventId) return;
+      
+      // Broadcast to everyone else in the room (the sender already optimistically added it)
+      socket.broadcast.to(eventId).emit("new_item", item);
+    });
+
+    socket.on("broadcast_text_reply", (payload) => {
+      const { eventId } = socket.data;
+      if (!eventId) return;
+      socket.broadcast.to(eventId).emit("new_text_reply", payload);
     });
   });
 }

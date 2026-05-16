@@ -304,13 +304,11 @@ export async function searchDeezerArtists(query: string): Promise<unknown[]> {
   return readApiData<unknown[]>(res)
 }
 
-/** Fetch a banter event by its joinSlug. Returns event + participantCount + participant. */
 export async function getBanterRoom(joinSlug: string): Promise<Event & { participantCount: number }> {
   const res = await apiFetch(`/events/slug/${encodeURIComponent(joinSlug)}`)
   return readApiData<Event & { participantCount: number }>(res)
 }
 
-/** Join a banter room by eventId. Returns sessionToken. */
 export async function joinBanterRoom(eventId: string, displayName: string): Promise<BanterJoinResponse> {
   const res = await apiFetch(`/events/${encodeURIComponent(eventId)}/join`, {
     method: 'POST',
@@ -326,7 +324,6 @@ export async function resetBanterLink(eventId: string): Promise<{ joinSlug: stri
   return readApiData<{ joinSlug: string }>(res)
 }
 
-/** Fetch paginated message history for a banter event. */
 export async function listBanterMessages(
   eventId: string,
   params?: { cursor?: string; limit?: number },
@@ -335,7 +332,6 @@ export async function listBanterMessages(
   return readApiData<{ messages: BanterMessage[]; nextCursor: string | null }>(res)
 }
 
-/** Send a message via REST fallback (WebSocket is preferred). */
 export async function sendBanterMessage(
   eventId: string,
   content: string,
@@ -352,7 +348,6 @@ export async function sendBanterMessage(
   return readApiData<BanterMessage>(res)
 }
 
-/** Vote on a specific option in a banter room (per-item, no batch). */
 export async function banterVote(
   eventId: string,
   itemId: string,

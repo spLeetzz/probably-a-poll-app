@@ -59,8 +59,9 @@ export async function handleUpdateEvent(req: FastifyRequest, reply: FastifyReply
     throw req.server.httpErrors.forbidden("Only the creator can update this event");
   }
 
-  if (existing.status !== "pending") {
-    throw req.server.httpErrors.badRequest("Event can only be updated while in pending status");
+  const canUpdate = existing.status === "pending" || (existing.type === "banter" && existing.status === "running");
+  if (!canUpdate) {
+    throw req.server.httpErrors.badRequest("Event can only be updated while in pending status (or running if it's a banter room)");
   }
 
   const event = await repo.updateEvent(id, body);
@@ -127,7 +128,8 @@ export async function handleGetEventBySlug(req: FastifyRequest, reply: FastifyRe
     participant = await repo.findParticipantByUserId(event.id, req.user.id);
   }
 
-  const eventData = event.isAnonymous ? { ...event, creatorId: undefined } : event;
+  const isCreator = Boolean(req.user?.id && req.user.id === event.creatorId);
+  const eventData = (event.isAnonymous && !isCreator) ? { ...event, creatorId: undefined } : event;
   return reply.send({ data: { ...eventData, participantCount, participant } });
 }
 

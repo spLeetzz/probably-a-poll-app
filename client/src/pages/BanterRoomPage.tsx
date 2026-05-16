@@ -1,639 +1,758 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
-import { io, Socket } from 'socket.io-client'
-import * as api from '../api/events-api'
-import { authClient } from '../lib/auth-client'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Label } from '@/components/ui/label'
-import { ScrollArea } from '@/components/ui/scroll-area'
-import { 
-  Send, 
-  Users, 
-  Ghost, 
-  MoreVertical, 
-  Link as LinkIcon, 
-  RotateCcw,
-  ChevronLeft,
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { io, Socket } from "socket.io-client";
+import * as api from "../api/events-api";
+import { authClient } from "../lib/auth-client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardFooter,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  Users,
+  Ghost,
   Loader2,
   MessageSquare,
+  BarChart2,
   Settings2,
-  BarChart
-} from 'lucide-react'
-import { toast } from 'sonner'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { formatDistanceToNow } from 'date-fns'
-import { ManageTab } from './event-detail/ManageTab'
-import { BanterItemCard } from '@/components/BanterItemCard'
+  Send,
+  Plus,
+  RefreshCcw,
+  Wifi,
+  ArrowRight,
+  ArrowLeft,
+  WifiOff,
+  LinkIcon,
+} from "lucide-react";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
+import { BanterItemCard } from "@/components/BanterItemCard";
+import { ManageTab } from "./event-detail/ManageTab";
+import { InlinePollCreator } from "@/components/inline-poll-creator";
+
+const statusBadge = (s: string) => {
+  switch (s) {
+    case "pending":
+      return (
+        <Badge variant='secondary' className='text-[10px] uppercase'>
+          Pending
+        </Badge>
+      );
+    case "running":
+      return (
+        <Badge className='bg-green-600 text-[10px] uppercase hover:bg-green-600'>
+          Live
+        </Badge>
+      );
+    case "completed":
+      return (
+        <Badge className='bg-blue-600 text-[10px] uppercase hover:bg-blue-600'>
+          Completed
+        </Badge>
+      );
+    default:
+      return (
+        <Badge variant='outline' className='text-[10px] uppercase'>
+          {s}
+        </Badge>
+      );
+  }
+};
 
 interface BanterServerToClient {
-  new_message: (msg: api.BanterMessage) => void
-  participant_joined: (payload: { displayName: string; participantId: string }) => void
-  room_joined: (payload: { eventId: string }) => void
-  new_item: (item: api.ItemWithOptions) => void
-  answer_recorded: (payload: { itemId: string; optionId: string; newVoteCount: number; totalResponses: number }) => void
-  presence_update: (payload: { count: number }) => void
-  error: (payload: { message: string }) => void
+  new_message: (msg: api.BanterMessage) => void;
+  participant_joined: (payload: {
+    displayName: string;
+    participantId: string;
+  }) => void;
+  room_joined: (payload: { eventId: string }) => void;
+  new_item: (item: api.ItemWithOptions) => void;
+  new_text_reply: (payload: { itemId: string; text: string }) => void;
+  answer_recorded: (payload: {
+    itemId: string;
+    optionId: string;
+    newVoteCount: number;
+    totalResponses: number;
+  }) => void;
+  presence_update: (payload: { count: number }) => void;
+  error: (payload: { message: string }) => void;
 }
 
 interface BanterClientToServer {
-  join_room: (payload: { joinSlug: string; sessionToken: string }) => void
-  send_message: (payload: { content: string }) => void
-}
-
-function EmptyPollsState() {
-  return (
-    <Card className="border-dashed py-12">
-      <CardContent className="flex flex-col items-center text-center text-muted-foreground">
-        <BarChart className="h-8 w-8 mb-2 opacity-20" />
-        <p className="text-sm">No polls have been added yet.</p>
-      </CardContent>
-    </Card>
-  )
-}
-
-interface ChatViewProps {
-  messages: api.BanterMessage[]
-  participant: api.BanterJoinResponse | null
-  event: api.Event
-  scrollRef: React.RefObject<HTMLDivElement | null>
-  nextCursor: string | null
-  loadingMore: boolean
-  loadMore: () => Promise<void>
-  message: string
-  setMessage: (val: string) => void
-  onSend: (e: React.FormEvent) => Promise<void>
-  sending: boolean
-}
-
-function ChatView({ 
-  messages, participant, event, scrollRef, nextCursor, 
-  loadingMore, loadMore, message, setMessage, onSend, sending 
-}: ChatViewProps) {
-  return (
-    <Card className="flex-1 overflow-hidden flex flex-col border-none shadow-xl bg-muted/20 h-full">
-      <ScrollArea className="flex-1 p-4" ref={scrollRef}>
-        {nextCursor && (
-          <div className="flex justify-center mb-4">
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={loadMore} 
-              disabled={loadingMore}
-              className="text-xs text-muted-foreground hover:text-primary"
-            >
-              {loadingMore ? <Loader2 className="h-3 w-3 animate-spin mr-2" /> : 'Load older messages'}
-            </Button>
-          </div>
-        )}
-        
-        <div className="space-y-6">
-          {messages.map((msg, i) => {
-            const isMe = msg.participantId === participant?.participantId
-            const showName = i === 0 || messages[i-1].participantId !== msg.participantId
-            
-            return (
-              <div key={msg.id} className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
-                {showName && (
-                  <span className="text-[10px] font-bold text-muted-foreground mb-1 px-1 flex items-center gap-1">
-                    {msg.displayName}
-                    {msg.participantId === event.creatorId && <Badge variant="outline" className="text-[8px] h-3 px-1 py-0">HOST</Badge>}
-                  </span>
-                )}
-                <div className={`
-                  max-w-[80%] px-4 py-2 rounded-2xl text-sm shadow-sm
-                  ${isMe 
-                    ? 'bg-primary text-primary-foreground rounded-tr-none' 
-                    : 'bg-card border rounded-tl-none'}
-                `}>
-                  {msg.content}
-                </div>
-                <span className="text-[9px] text-muted-foreground mt-1 px-1">
-                  {formatDistanceToNow(new Date(msg.createdAt), { addSuffix: true })}
-                </span>
-              </div>
-            )
-          })}
-          <div className="h-2" />
-        </div>
-      </ScrollArea>
-
-      <div className="p-4 bg-background border-t">
-        <form onSubmit={onSend} className="flex gap-2">
-          <Input
-            placeholder="Say something nice..."
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            className="flex-1 rounded-full px-4 h-11 border-primary/20 focus-visible:ring-primary"
-            maxLength={2000}
-          />
-          <Button 
-            type="submit" 
-            size="icon" 
-            className="rounded-full h-11 w-11 flex-shrink-0 transition-transform active:scale-95" 
-            disabled={sending || !message.trim()}
-          >
-            <Send className="h-5 w-5" />
-          </Button>
-        </form>
-      </div>
-    </Card>
-  )
+  join_room: (payload: { joinSlug: string; sessionToken: string }) => void;
+  send_message: (payload: { content: string }) => void;
+  broadcast_item: (payload: { item: Record<string, unknown> }) => void;
+  broadcast_text_reply: (payload: { itemId: string; text: string }) => void;
 }
 
 export function BanterRoomPage() {
-  const { joinSlug } = useParams<{ joinSlug: string }>()
-  const navigate = useNavigate()
-  const { data: session } = authClient.useSession()
-  
-  const [event, setEvent] = useState<(api.Event & { participantCount: number }) | null>(null)
-  const [messages, setMessages] = useState<api.BanterMessage[]>([])
-  const [loading, setLoading] = useState(true)
-  const [joining, setJoining] = useState(false)
-  const [sending, setSending] = useState(false)
-  const [displayName, setDisplayName] = useState(session?.user?.name || '')
-  const [message, setMessage] = useState('')
-  const [nextCursor, setNextCursor] = useState<string | null>(null)
-  const [loadingMore, setLoadingMore] = useState(false)
-  
-  const socketRef = useRef<Socket<BanterServerToClient, BanterClientToServer> | null>(null)
-  const scrollRef = useRef<HTMLDivElement>(null)
-  const [participant, setParticipant] = useState<api.BanterJoinResponse | null>(null)
-  const [items, setItems] = useState<api.ItemWithOptions[]>([])
-  const [activeTab, setActiveTab] = useState('chat')
-  const [liveVoteCounts, setLiveVoteCounts] = useState<Record<string, number>>({})
+  const { joinSlug } = useParams<{ joinSlug: string }>();
+  const navigate = useNavigate();
+  const { data: session } = authClient.useSession();
 
-  const isCreator = session?.user?.id && event?.creatorId === session.user.id
+  const [event, setEvent] = useState<
+    (api.Event & { participantCount: number }) | null
+  >(null);
+  const [messages, setMessages] = useState<api.BanterMessage[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [joining, setJoining] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [displayName, setDisplayName] = useState(session?.user?.name || "");
+  const [message, setMessage] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
 
+  const socketRef = useRef<Socket<
+    BanterServerToClient,
+    BanterClientToServer
+  > | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [participant, setParticipant] = useState<api.BanterJoinResponse | null>(
+    null,
+  );
+  const [items, setItems] = useState<api.ItemWithOptions[]>([]);
+  const [liveVoteCounts, setLiveVoteCounts] = useState<Record<string, number>>(
+    {},
+  );
+  const [textReplies, setTextReplies] = useState<Record<string, string[]>>({});
+
+  const isCreator = session?.user?.id && event?.creatorId === session.user.id;
 
   // Initialize room data
   const initRoom = useCallback(async () => {
-    if (!joinSlug) return
-    setLoading(true)
-    setMessages([])
-    setLiveVoteCounts({})
+    if (!joinSlug) return;
+    setLoading(true);
+    setMessages([]);
+    setLiveVoteCounts({});
     try {
-      // ── Critical: fetch room metadata ──────────────────────────────────
-      const data = await api.getBanterRoom(joinSlug)
-      setEvent(data)
+      const data = await api.getBanterRoom(joinSlug);
+      setEvent(data);
 
-      // ── Non-critical: messages, items, analytics (failures don't block entry) ──
       const loadExtras = async () => {
-        // Messages
         try {
-          const msgsData = await api.listBanterMessages(data.id, { limit: 50 })
-          setMessages(msgsData.messages.reverse())
-          setNextCursor(msgsData.nextCursor)
-        } catch { toast.error('Could not load message history') }
+          const msgsData = await api.listBanterMessages(data.id, { limit: 50 });
+          setMessages(msgsData.messages.reverse());
+        } catch {
+          /* silence */
+        }
 
-        // Items
         try {
-          const itsData = await api.listItems(data.id)
-          setItems(itsData)
-        } catch { /* polls tab will just show empty */ }
-      }
-      void loadExtras()
+          const itsData = await api.listItems(data.id);
+          setItems(itsData.reverse());
+        } catch {
+          /* silence */
+        }
+      };
+      void loadExtras();
 
-      // ── Participant state ──────────────────────────────────────────────
       if (data.participant) {
         const p = {
           participantId: data.participant.id,
-          sessionToken: data.participant.sessionToken || '',
-          displayName: data.participant.displayName || '',
+          sessionToken: data.participant.sessionToken || "",
+          displayName: data.participant.displayName || "",
           alreadyJoined: true,
-        }
-        setParticipant(p)
+        };
+        setParticipant(p);
         if (p.sessionToken) {
-          localStorage.setItem(`banter_token_${joinSlug}`, p.sessionToken)
+          localStorage.setItem(`banter_token_${joinSlug}`, p.sessionToken);
         }
       }
     } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Failed to load room'
-      toast.error(msg)
-      navigate('/')
+      toast.error(e instanceof Error ? e.message : "Failed to load room");
+      navigate("/");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [joinSlug, navigate])
+  }, [joinSlug, navigate]);
+
+  const copyLink = () => {
+    navigator.clipboard.writeText(window.location.href);
+    toast.success("Link copied!");
+  };
 
   useEffect(() => {
-    void initRoom()
-  }, [initRoom])
+    void initRoom();
+  }, [initRoom]);
 
   // Socket setup
   useEffect(() => {
-    if (!participant || !joinSlug) return
+    if (!participant || !joinSlug) return;
 
-    const socket: Socket<BanterServerToClient, BanterClientToServer> = io('/banter', {
-      path: '/socket.io',
-      withCredentials: true,
-      transports: ['websocket', 'polling'],
-    })
-    socketRef.current = socket
+    const socket: Socket<BanterServerToClient, BanterClientToServer> = io(
+      "/banter",
+      {
+        path: "/socket.io",
+        withCredentials: true,
+        transports: ["websocket", "polling"],
+      },
+    );
+    socketRef.current = socket;
 
-    socket.on('connect', () => {
-      socket.emit('join_room', {
+    socket.on("connect", () => {
+      setIsConnected(true);
+      socket.emit("join_room", {
         joinSlug,
-        sessionToken: participant.sessionToken
-      })
-    })
+        sessionToken: participant.sessionToken,
+      });
+    });
 
-    socket.on('room_joined', () => {
-      console.log('Successfully joined WebSocket room')
-    })
+    socket.on("disconnect", () => {
+      setIsConnected(false);
+    });
 
-    socket.on('new_message', (msg) => {
-      setMessages(prev => [...prev, msg])
-      // Scroll to bottom if we're near the bottom
+    socket.on("new_message", (msg) => {
+      setMessages((prev) => [...prev, msg]);
       setTimeout(() => {
-        if (scrollRef.current) {
-          scrollRef.current.scrollTop = scrollRef.current.scrollHeight
-        }
-      }, 100)
-    })
+        if (scrollRef.current)
+          scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      }, 100);
+    });
 
-    socket.on('participant_joined', ({ displayName }) => {
-      toast.info(`${displayName} joined the room`)
-      setEvent(prev => prev ? { ...prev, participantCount: prev.participantCount + 1 } : null)
-    })
+    socket.on("participant_joined", ({ displayName }) => {
+      toast.info(`${displayName} joined`);
+      setEvent((prev) =>
+        prev ? { ...prev, participantCount: prev.participantCount + 1 } : null,
+      );
+    });
 
-    socket.on('new_item', (item) => {
-      setItems(prev => [...prev, item])
-      toast.info('New poll question added!')
-    })
+    socket.on("new_item", (item) => {
+      setItems((prev) => {
+        if (prev.some((i) => i.id === item.id)) return prev;
+        return [item, ...prev];
+      });
+      toast.info("New banter question added!");
+    });
 
-    socket.on('answer_recorded', (p) => {
-      setLiveVoteCounts(prev => ({
+    socket.on("answer_recorded", (p) => {
+      setLiveVoteCounts((prev) => ({
         ...prev,
-        [p.optionId]: p.newVoteCount as number
-      }))
-    })
+        [p.optionId]: p.newVoteCount as number,
+      }));
+    });
 
-    socket.on('presence_update', ({ count }) => {
-      setEvent(prev => prev ? { ...prev, participantCount: count } : null)
-    })
-    
-    socket.on('error', ({ message }) => {
-      toast.error(message)
-    })
+    socket.on("new_text_reply", ({ itemId, text }) => {
+      setTextReplies((prev) => ({
+        ...prev,
+        [itemId]: [...(prev[itemId] || []), text],
+      }));
+    });
+
+    socket.on("presence_update", ({ count }) => {
+      setEvent((prev) => (prev ? { ...prev, participantCount: count } : null));
+    });
+
+    socket.on("error", ({ message }) => {
+      toast.error(message);
+    });
 
     return () => {
-      socket.disconnect()
-      socketRef.current = null
-    }
-  }, [participant, joinSlug])
+      socket.disconnect();
+      socketRef.current = null;
+    };
+  }, [participant, joinSlug]);
 
   const onJoin = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!joinSlug) return
-    
-    // Auth check if needed
-    if (event?.authOnly && !session) {
-      toast.error('Authentication required to join this room')
-      return
-    }
-
-    if (!event) return
-
-    setJoining(true)
+    e.preventDefault();
+    if (!event) return;
+    setJoining(true);
     try {
-      const res = await api.joinBanterRoom(event.id, displayName)
-      setParticipant(res)
-      setEvent(prev => prev ? { ...prev, participantCount: prev.participantCount + 1 } : null)
-      localStorage.setItem(`banter_token_${joinSlug}`, res.sessionToken)
-      toast.success('Joined successfully')
+      const res = await api.joinBanterRoom(event.id, displayName);
+      setParticipant(res);
+      localStorage.setItem(`banter_token_${joinSlug}`, res.sessionToken);
+      toast.success("Joined");
     } catch (ex) {
-      toast.error(ex instanceof Error ? ex.message : 'Join failed')
+      toast.error("Join failed");
     } finally {
-      setJoining(false)
+      setJoining(false);
     }
-  }
+  };
 
   const onSend = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!message.trim() || !participant || !joinSlug) return
-
-    setSending(true)
+    e.preventDefault();
+    if (!message.trim() || !participant) return;
+    setSending(true);
     try {
-      if (socketRef.current?.connected) {
-        socketRef.current.emit('send_message', { content: message.trim() })
-      } else {
-        // Fallback to REST
-        await api.sendBanterMessage(event!.id, message.trim(), participant.sessionToken)
+      socketRef.current?.emit("send_message", { content: message.trim() });
+      setMessage("");
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const handleTextReply = async (itemId: string, replyText: string) => {
+    if (!participant) return;
+    const item = items.find((i) => i.id === itemId);
+    if (!item) return;
+
+    // Add locally immediately
+    setTextReplies((prev) => ({
+      ...prev,
+      [itemId]: [...(prev[itemId] || []), replyText],
+    }));
+
+    // Broadcast to others
+    socketRef.current?.emit("broadcast_text_reply", {
+      itemId,
+      text: replyText,
+    });
+  };
+
+  const onAddBanterItem = async (
+    text: string,
+    mandatory: boolean,
+    options: string[],
+  ) => {
+    if (!event || !participant) return;
+    setBusy(true);
+    try {
+      // Use existing API to create item. Note: we might want to ensure 'order' is managed if we prepend.
+      // But usually 'prepend' is a UI thing, or we can use negative orders / re-order everything.
+      // For now, we just create it. The socket 'new_item' will trigger the prepend in state.
+      const newItem = await api.createItem(
+        event.id,
+        {
+          text,
+          order: items.length + 1,
+          isMandatory: mandatory,
+        },
+        participant.sessionToken,
+      );
+
+      let finalItem: api.ItemWithOptions = { ...newItem, options: [] };
+
+      if (options.length > 0) {
+        const optionInputs = options.map((opt, i) => ({
+          text: opt,
+          order: i + 1,
+        }));
+        const savedOptions = await api.setItemOptions(
+          event.id,
+          newItem.id,
+          optionInputs,
+          participant.sessionToken,
+        );
+        finalItem.options = savedOptions;
       }
-      setMessage('')
-    } catch (ex) {
-      toast.error('Failed to send message')
-    } finally {
-      setSending(false)
-    }
-  }
 
-  const loadMore = async () => {
-    if (!nextCursor || loadingMore || !event) return
-    setLoadingMore(true)
-    try {
-      const data = await api.listBanterMessages(event.id, { cursor: nextCursor, limit: 50 })
-      setMessages(prev => [...data.messages.reverse(), ...prev])
-      setNextCursor(data.nextCursor)
+      setItems((prev) => {
+        if (prev.some((i) => i.id === newItem.id)) return prev;
+        return [finalItem, ...prev];
+      });
+
+      // Broadcast to other users in the room
+      socketRef.current?.emit("broadcast_item", {
+        item: finalItem as Record<string, unknown>,
+      });
+
+      toast.success("Banter added");
     } catch (e) {
-      toast.error('Failed to load older messages')
+      toast.error("Failed to add banter");
     } finally {
-      setLoadingMore(false)
+      setBusy(false);
     }
-  }
+  };
 
-
-
-  const [busy, setBusy] = useState(false)
+  const handleResetLink = async () => {
+    if (!event) return;
+    setBusy(true);
+    try {
+      const { joinSlug } = await api.resetBanterLink(event.id);
+      setEvent((prev) => (prev ? { ...prev, joinSlug } : null));
+      toast.success("Invite link has been reset!");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to reset link");
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const handleSaveMeta = async (data: any) => {
-    if (!event || !joinSlug) return
-    setBusy(true)
+    if (!event) return;
+    setBusy(true);
     try {
-      const ev = await api.updateEvent(event.id, data)
-      setEvent({ ...ev, participantCount: event.participantCount })
-      toast.success('Settings saved')
-    } catch (e) {
-      toast.error('Save failed')
+      const ev = await api.updateEvent(event.id, data);
+      setEvent({ ...ev, participantCount: event.participantCount });
+      toast.success("Settings saved");
+    } catch {
+      toast.error("Failed");
     } finally {
-      setBusy(false)
+      setBusy(false);
     }
-  }
-
-
-  const resetLink = async () => {
-    if (!event) return
-    try {
-      const res = await api.resetBanterLink(event.id)
-      toast.success('Link reset — share the new URL')
-      navigate(`/room/${res.joinSlug}`, { replace: true })
-    } catch (e) {
-      toast.error('Failed to reset link')
-    }
-  }
+  };
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-        <Loader2 className="h-10 w-10 animate-spin text-primary" />
-        <p className="text-muted-foreground animate-pulse">Entering the banter room...</p>
+      <div className='flex flex-col items-center justify-center min-h-[60vh] gap-4'>
+        <Loader2 className='h-10 w-10 animate-spin text-primary' />
+        <p className='text-muted-foreground animate-pulse'>
+          Entering the banter room...
+        </p>
       </div>
-    )
+    );
   }
 
-  if (!event) return null
+  if (!event) return null;
 
-  // Join View
   if (!participant) {
     return (
-      <div className="max-w-md mx-auto py-10">
-        <Card className="shadow-xl border-primary/20 overflow-hidden">
-          <div className="h-2 bg-primary w-full" />
-          <CardHeader className="text-center space-y-4">
-            <div className="mx-auto bg-primary/10 w-16 h-16 rounded-full flex items-center justify-center">
-              <MessageSquare className="h-8 w-8 text-primary" />
+      <div className='max-w-md mx-auto py-10'>
+        <Card className='shadow-xl border-primary/20 overflow-hidden'>
+          <div className='h-2 bg-primary w-full' />
+          <CardHeader className='text-center space-y-4'>
+            <div className='mx-auto bg-primary/10 w-16 h-16 rounded-full flex items-center justify-center'>
+              <MessageSquare className='h-8 w-8 text-primary' />
             </div>
             <div>
-              <CardTitle className="text-2xl font-bold">{event.title}</CardTitle>
-              <CardDescription>{event.description || 'Welcome to the banter room!'}</CardDescription>
+              <CardTitle className='text-2xl font-bold'>
+                {event.title}
+              </CardTitle>
+              <CardDescription>
+                {event.description || "Welcome to the banter room!"}
+              </CardDescription>
             </div>
-            <div className="flex items-center justify-center gap-4 text-sm text-muted-foreground">
-              <div className="flex items-center gap-1">
-                <Users className="h-4 w-4" />
+            <div className='flex items-center justify-center gap-4 text-sm text-muted-foreground'>
+              <div className='flex items-center gap-1'>
+                <Users className='h-4 w-4' />
                 {event.participantCount} online
               </div>
               {event.isAnonymous && (
-                <div className="flex items-center gap-1 text-orange-500 font-medium">
-                  <Ghost className="h-4 w-4" />
-                  Anonymous
+                <div className='flex items-center gap-1 text-orange-500 font-medium'>
+                  <Ghost className='h-4 w-4' /> Anonymous
                 </div>
               )}
             </div>
           </CardHeader>
           <CardContent>
-            <form onSubmit={onJoin} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="displayName">How should we call you?</Label>
+            <form onSubmit={onJoin} className='space-y-4'>
+              <div className='space-y-2'>
+                <Label htmlFor='displayName'>How should we call you?</Label>
                 <Input
-                  id="displayName"
-                  placeholder="Enter a display name"
+                  id='displayName'
+                  placeholder='Enter a display name'
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
                   required
                   autoFocus
-                  className="text-center text-lg h-12"
+                  className='text-center text-lg h-12'
                 />
               </div>
-              <Button type="submit" className="w-full h-12 text-lg font-medium text-primary-foreground/80" disabled={joining}>
-                {joining ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : 'Join Banter'}
+              <Button
+                type='submit'
+                className='w-full h-14 text-sm font-bold uppercase tracking-wider rounded-xl shadow-lg transition-all hover:scale-[1.02] active:scale-[0.98] group'
+                disabled={joining || !displayName.trim()}
+              >
+                {joining ? (
+                  <Loader2 className='mr-2 h-5 w-5 animate-spin' />
+                ) : (
+                  <span className='flex items-center gap-2'>
+                    Join Banter{" "}
+                    <ArrowRight className='h-4 w-4 group-hover:translate-x-1 transition-transform' />
+                  </span>
+                )}
               </Button>
             </form>
           </CardContent>
-          <CardFooter className="bg-muted/50 py-3 text-center justify-center">
-            <p className="text-[10px] text-muted-foreground uppercase tracking-widest">
-              {event.authOnly ? 'Authentication Required' : 'Public Access'}
-            </p>
-          </CardFooter>
         </Card>
       </div>
-    )
+    );
   }
 
-  // Chat View
   return (
-    <div className="max-w-4xl mx-auto h-[calc(100vh-12rem)] flex flex-col gap-4">
-      {/* Header */}
-      <div className="flex items-center justify-between bg-card p-4 rounded-xl border shadow-sm sticky top-0 z-10">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
-            <ChevronLeft className="h-5 w-5" />
+    <div className='max-w-6xl mx-auto space-y-6'>
+      {/* Header Info */}
+      <div className='space-y-3'>
+        <div className='flex items-center gap-3'>
+          <Button
+            variant='ghost'
+            size='icon'
+            onClick={() => navigate("/")}
+            className='h-8 w-8'
+          >
+            <ArrowLeft className='h-4 w-4' />
           </Button>
-          <div className="flex flex-col">
-            <div className="flex items-center gap-2 mb-1">
-              <h1 className="font-bold text-lg leading-none">{event.title}</h1>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="h-6 w-6 opacity-30 hover:opacity-100 transition-opacity"
-                onClick={() => {
-                  navigator.clipboard.writeText(window.location.href)
-                  toast.success('Link copied!')
-                }}
+          <div className='flex items-center gap-2 flex-1 min-w-0'>
+            {statusBadge(event.status)}
+            <Badge variant='outline' className='text-[10px] uppercase'>
+              {event.type}
+            </Badge>
+            {isConnected ? (
+              <span className='flex items-center gap-1 text-sm text-green-600 font-medium ml-auto'>
+                <Wifi className='h-3 w-3' /> Live
+              </span>
+            ) : (
+              <span className='flex items-center gap-1 text-sm text-muted-foreground ml-auto'>
+                <WifiOff className='h-3 w-3' /> Offline
+              </span>
+            )}
+          </div>
+        </div>
+        <div className='flex items-start justify-between gap-4'>
+          <div className='min-w-0'>
+            <div className='flex items-center gap-3'>
+              <h1 className='text-4xl font-bold tracking-tight truncate'>
+                {event.title}
+              </h1>
+              <div className='flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground bg-muted/30 px-2 py-1 rounded-md'>
+                <Users className='h-3 w-3' /> {event.participantCount} online
+              </div>
+              <Button
+                variant='ghost'
+                size='icon'
+                className='h-8 w-8 opacity-40 hover:opacity-100 transition-opacity'
+                onClick={copyLink}
               >
-                <LinkIcon className="h-3 w-3" />
+                <LinkIcon className='h-4 w-4' />
               </Button>
             </div>
-            {event.description && <p className="text-xs text-muted-foreground mb-1">{event.description}</p>}
-            <div className="flex items-center gap-3 text-xs text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <Users className="h-3 w-3" />
-                {event.participantCount} participants
-              </span>
-              {event.isAnonymous && (
-                <span className="flex items-center gap-1 text-orange-500">
-                  <Ghost className="h-3 w-3" />
-                  Anonymous Room
-                </span>
-              )}
-            </div>
+            {event.description && (
+              <p className='text-muted-foreground mt-2'>{event.description}</p>
+            )}
           </div>
-        </div>
-        
-        <div className="flex items-center gap-2">
-          {session?.user?.id === event.creatorId && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <MoreVertical className="h-5 w-5" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => {
-                  navigator.clipboard.writeText(window.location.href)
-                  toast.success('Link copied!')
-                }}>
-                  <LinkIcon className="mr-2 h-4 w-4" />
-                  Copy Invite Link
-                </DropdownMenuItem>
-                <DropdownMenuItem className="text-destructive" onClick={resetLink}>
-                  <RotateCcw className="mr-2 h-4 w-4" />
-                  Reset Invite Link
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
+          <div className='flex items-center gap-2 shrink-0'>
+            <Button
+              variant='outline'
+              size='icon'
+              onClick={() => void initRoom(true)}
+              title='Refresh'
+            >
+              <RefreshCcw className='h-4 w-4' />
+            </Button>
+            <Button
+              variant='outline'
+              size='icon'
+              onClick={copyLink}
+              title='Copy Link'
+            >
+              <LinkIcon className='h-4 w-4' />
+            </Button>
+          </div>
         </div>
       </div>
 
-      {/* Main Layout: Split on LG, Tabs on Mobile */}
-      <div className="flex-1 min-h-0">
-        {/* Desktop: Side-by-Side */}
-        <div className="hidden lg:grid lg:grid-cols-12 gap-6 h-full">
-          {/* Chat Column */}
-          <div className="lg:col-span-7 flex flex-col min-h-0">
-             <ChatView 
-                messages={messages} 
-                participant={participant} 
-                event={event} 
-                scrollRef={scrollRef} 
-                nextCursor={nextCursor} 
-                loadingMore={loadingMore} 
-                loadMore={loadMore} 
-                message={message} 
-                setMessage={setMessage} 
-                onSend={onSend} 
-                sending={sending} 
-              />
-          </div>
+      <Tabs defaultValue='chat' className='mt-6'>
+        <TabsList className='w-full bg-transparent p-0 border-b border-white/5'>
+          <TabsTrigger
+            value='chat'
+            className='flex-1 gap-1.5 bg-transparent data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:border-b-2 data-[state=active]:border-white/20 rounded-none shadow-none opacity-50 data-[state=active]:opacity-100 transition-all'
+          >
+            <MessageSquare className='h-4 w-4' /> Chat
+          </TabsTrigger>
+          <TabsTrigger
+            value='polls'
+            className='flex-1 gap-1.5 bg-transparent data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:border-b-2 data-[state=active]:border-white/20 rounded-none shadow-none opacity-50 data-[state=active]:opacity-100 transition-all'
+          >
+            <BarChart2 className='h-4 w-4' /> Questions
+          </TabsTrigger>
+          {isCreator && (
+            <TabsTrigger
+              value='manage'
+              className='flex-1 gap-1.5 bg-transparent data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:border-b-2 data-[state=active]:border-white/20 rounded-none shadow-none opacity-50 data-[state=active]:opacity-100 transition-all'
+            >
+              <Settings2 className='h-4 w-4' /> Manage
+            </TabsTrigger>
+          )}
+        </TabsList>
 
-          {/* Polls Column */}
-          <div className="lg:col-span-5 flex flex-col min-h-0 overflow-auto">
-              <div className="space-y-6 pb-6">
-                <div className="space-y-4">
-                  <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Active Questions</h2>
-                  {items.length === 0 ? (
-                    <EmptyPollsState />
-                  ) : (
-                    <div className="space-y-4">
-                      {items.map(item => (
-                        <BanterItemCard
-                          key={item.id}
-                          item={item}
-                          eventId={event.id}
-                          sessionToken={participant?.sessionToken}
-                          liveVoteCounts={liveVoteCounts}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </div>
-             </div>
-          </div>
-        </div>
-
-        {/* Mobile/Tablet: Tabs */}
-        <div className="lg:hidden h-full flex flex-col">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
-            <TabsList className={`grid w-full ${isCreator ? 'grid-cols-3' : 'grid-cols-2'}`}>
-              <TabsTrigger value="chat" className="gap-2">
-                <MessageSquare className="h-4 w-4" /> Chat
-              </TabsTrigger>
-              <TabsTrigger value="polls" className="gap-2">
-                <BarChart className="h-4 w-4" /> Polls
-                {items.length > 0 && <Badge variant="secondary" className="ml-1 h-4 px-1 text-[10px]">{items.length}</Badge>}
-              </TabsTrigger>
-              {isCreator && (
-                <TabsTrigger value="manage" className="gap-2">
-                  <Settings2 className="h-4 w-4" /> Manage
-                </TabsTrigger>
-              )}
-            </TabsList>
-
-            <TabsContent value="chat" className="flex-1 flex flex-col min-h-0 mt-2">
-              <ChatView 
-                messages={messages} 
-                participant={participant} 
-                event={event} 
-                scrollRef={scrollRef} 
-                nextCursor={nextCursor} 
-                loadingMore={loadingMore} 
-                loadMore={loadMore} 
-                message={message} 
-                setMessage={setMessage} 
-                onSend={onSend} 
-                sending={sending} 
-              />
-            </TabsContent>
-
-            <TabsContent value="polls" className="flex-1 overflow-auto mt-2 px-1">
-              <div className="space-y-6 pb-20">
-                <div className="flex items-center justify-between">
-                  <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground/60">Poll Items</h3>
-                  <Badge variant="secondary" className="bg-primary/10 text-primary border-none">{items.length}</Badge>
-                </div>
-                {items.length === 0 ? (
-                  <EmptyPollsState />
-                ) : (
-                  <div className="space-y-4">
-                    {items.map(item => (
-                      <BanterItemCard
-                        key={item.id}
-                        item={item}
-                        eventId={event.id}
-                        sessionToken={participant?.sessionToken}
-                        liveVoteCounts={liveVoteCounts}
-                      />
-                    ))}
+        <TabsContent
+          value='chat'
+          className='mt-6 flex flex-col h-[calc(100vh-18rem)] min-h-[500px]'
+        >
+          <div className='flex-1 bg-card/10 rounded-3xl border border-white/5 shadow-inner p-4 pb-6 flex flex-col min-h-0'>
+            <ScrollArea className='flex-1 pr-4' ref={scrollRef}>
+              <div className='space-y-6'>
+                {messages.length === 0 && (
+                  <div className='py-20 flex flex-col items-center justify-center text-center gap-4 opacity-20'>
+                    <MessageSquare className='h-12 w-12' />
+                    <p className='text-sm font-medium'>
+                      No messages yet. Start the banter!
+                    </p>
                   </div>
                 )}
+                {messages.map((msg, i) => {
+                  const isMe = msg.participantId === participant.participantId;
+                  const showHeader =
+                    i === 0 ||
+                    messages[i - 1].participantId !== msg.participantId;
+                  return (
+                    <div
+                      key={msg.id}
+                      className={cn(
+                        "flex flex-col gap-1",
+                        isMe ? "items-end" : "items-start",
+                        !showHeader && "-mt-4",
+                      )}
+                    >
+                      {showHeader && (
+                        <div
+                          className={cn(
+                            "flex items-center gap-2 px-1",
+                            isMe && "flex-row-reverse",
+                          )}
+                        >
+                          <Avatar className='h-6 w-6 border shadow-sm'>
+                            <AvatarFallback className='text-[8px] font-semibold bg-primary/10 text-primary'>
+                              {msg.displayName.charAt(0).toUpperCase() || "?"}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span
+                            className={cn(
+                              "text-[8px] font-semibold uppercase tracking-widest",
+                              isMe
+                                ? "text-primary"
+                                : "text-muted-foreground/60",
+                            )}
+                          >
+                            {isMe ? "You" : msg.displayName}
+                          </span>
+                        </div>
+                      )}
+                      <div
+                        className={cn(
+                          "px-4 py-2.5 rounded-2xl text-sm max-w-[85%] font-medium transition-all shadow-sm border flex flex-col",
+                          isMe
+                            ? "bg-zinc-200 text-zinc-50 dark:bg-zinc-200 dark:text-zinc-900 border-transparent rounded-tr-none"
+                            : "bg-zinc-700 text-zinc-50 border-transparent rounded-tl-none backdrop-blur-sm",
+                        )}
+                      >
+                        <span>{msg.content}</span>
+                        <span
+                          className={cn(
+                            "text-xs mt-1 self-end font-semibold",
+                            isMe
+                              ? "text-zinc-400 dark:text-zinc-500"
+                              : "text-muted-foreground opacity-60",
+                          )}
+                        >
+                          {format(new Date(msg.createdAt), "h:mm a")}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            </TabsContent>
+            </ScrollArea>
 
-            {isCreator && (
-              <TabsContent value="manage" className="flex-1 overflow-auto mt-2 px-1">
-                <ManageTab
-                  event={event}
-                  busy={busy}
-                  onSaveMeta={handleSaveMeta}
-                  onStart={() => api.startEvent(event.id).then(ev => setEvent({ ...ev, participantCount: event.participantCount }))}
-                  onComplete={() => api.completeEvent(event.id).then(ev => setEvent({ ...ev, participantCount: event.participantCount }))}
-                  onPublish={() => api.publishEvent(event.id).then(ev => setEvent({ ...ev, participantCount: event.participantCount }))}
-                  onDelete={() => api.deleteEvent(event.id).then(() => navigate('/'))}
-                />
-              </TabsContent>
+            <form onSubmit={onSend} className='mt-4 flex gap-2'>
+              <Input
+                value={message}
+                onChange={(e) => setMessage(e.target.value)}
+                placeholder={
+                  event.status === "completed"
+                    ? "Room archived. Chat is closed."
+                    : "Send a message..."
+                }
+                className='h-12 bg-background border-[0.5px] border-foreground/20 shadow-sm focus-visible:ring-1 focus-visible:ring-primary/20'
+                disabled={sending || event.status === "completed"}
+              />
+              <Button
+                type='submit'
+                size='icon'
+                variant='ghost'
+                className='h-12 w-12 shrink-0 rounded-xl border-[0.5px] border-foreground/20 bg-background hover:bg-muted'
+                disabled={
+                  sending || !message.trim() || event.status === "completed"
+                }
+              >
+                <Send className='h-5 w-5' />
+              </Button>
+            </form>
+          </div>
+        </TabsContent>
+
+        <TabsContent value='polls' className='mt-6 outline-none'>
+          <div className='space-y-8 pb-20'>
+            {event.status !== "completed" && (
+              <Card className='border-dashed bg-muted/10 shadow-none'>
+                <CardContent className='pt-6'>
+                  <div className='space-y-4'>
+                    <div className='flex items-center gap-2'>
+                      <Plus className='h-4 w-4 text-primary' />
+                      <span className='text-xs font-semibold uppercase tracking-widest'>
+                        New Question
+                      </span>
+                    </div>
+                    <InlinePollCreator onAdd={onAddBanterItem} busy={busy} />
+                  </div>
+                </CardContent>
+              </Card>
             )}
-          </Tabs>
-        </div>
-      </div>
+
+            <div className='space-y-6'>
+              <div className='flex items-center justify-between'>
+                <h3 className='text-xs font-semibold uppercase tracking-widest text-muted-foreground/60'>
+                  Questions
+                </h3>
+                <Badge variant='outline' className='text-[8px] font-medium'>
+                  {items.length}
+                </Badge>
+              </div>
+              <div className='grid gap-4'>
+                {items.map((item) => (
+                  <BanterItemCard
+                    key={item.id}
+                    item={item}
+                    eventId={event.id}
+                    sessionToken={participant.sessionToken}
+                    liveVoteCounts={liveVoteCounts}
+                    onTextReply={handleTextReply}
+                    textReplies={textReplies[item.id] || []}
+                    isArchived={event.status === "completed"}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        </TabsContent>
+
+        {isCreator && (
+          <TabsContent value='manage' className='mt-6 outline-none pb-20'>
+            <ManageTab
+              event={event}
+              busy={busy}
+              onSaveMeta={handleSaveMeta}
+              onResetLink={handleResetLink}
+              onStart={() =>
+                api.startEvent(event.id).then((ev) =>
+                  setEvent({
+                    ...ev,
+                    participantCount: event.participantCount,
+                  }),
+                )
+              }
+              onComplete={() =>
+                api.completeEvent(event.id).then((ev) =>
+                  setEvent({
+                    ...ev,
+                    participantCount: event.participantCount,
+                  }),
+                )
+              }
+              onPublish={() =>
+                api.publishEvent(event.id).then((ev) =>
+                  setEvent({
+                    ...ev,
+                    participantCount: event.participantCount,
+                  }),
+                )
+              }
+              onDelete={() =>
+                api.deleteEvent(event.id).then(() => navigate("/"))
+              }
+            />
+          </TabsContent>
+        )}
+      </Tabs>
     </div>
-  )
+  );
 }

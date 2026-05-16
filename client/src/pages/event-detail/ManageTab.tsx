@@ -46,6 +46,8 @@ import {
   LockKeyhole,
   Settings2,
   BarChart2,
+  RefreshCw,
+  Archive,
 } from "lucide-react";
 import { format, addMinutes, isValid } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -70,6 +72,7 @@ interface Props {
   onComplete: () => void;
   onPublish: () => void;
   onDelete: () => void;
+  onResetLink?: () => void;
 }
 
 export function ManageTab({
@@ -80,6 +83,7 @@ export function ManageTab({
   onComplete,
   onPublish,
   onDelete,
+  onResetLink,
 }: Props) {
   const [title, setTitle] = useState(event.title);
   const [description, setDescription] = useState(event.description ?? "");
@@ -93,7 +97,7 @@ export function ManageTab({
     event.expiresAt ? new Date(event.expiresAt) : undefined,
   );
 
-  const isEditable = event.status === "pending";
+  const isEditable = event.status === "pending" || (event.type === "banter" && event.status !== "completed");
 
   // Debounced auto-save for settings
   useEffect(() => {
@@ -149,265 +153,278 @@ export function ManageTab({
   const safeDate = expiresAt && isValid(expiresAt) ? expiresAt : undefined;
 
   return (
-
-    <div className='max-w-2xl mx-auto space-y-6'>
-      {/* Locked Alert */}
-      {!isEditable && (
-        <div className="bg-amber-500/10 border border-amber-500/20 rounded-lg p-4 flex items-start gap-3">
-           <LockKeyhole className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
-           <div>
-             <p className="text-sm font-bold text-amber-600">Event is Locked</p>
-             <p className="text-xs text-amber-600/80">Settings cannot be edited while the event is {event.status}.</p>
-           </div>
+    <div className='w-full space-y-6'>
+      {/* Sleek Minimal Status Bar */}
+      <div className={cn(
+        "flex flex-col sm:flex-row items-center justify-between p-2 pl-4 rounded-xl border transition-colors",
+        !isEditable ? "bg-muted/30 border-border" : "bg-card border-primary/20 shadow-sm"
+      )}>
+        <div className="flex items-center gap-3 w-full sm:w-auto mb-3 sm:mb-0">
+          <div className={cn(
+            "h-2 w-2 rounded-full",
+            event.status === 'running' ? "bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.5)]" :
+            event.status === 'completed' ? "bg-blue-500" :
+            "bg-amber-500"
+          )} />
+          <span className="text-sm font-semibold capitalize tracking-wide text-foreground">
+            {event.status}
+          </span>
+          {!isEditable && (
+            <div className="flex items-center gap-1.5 ml-2 text-muted-foreground">
+              <LockKeyhole className="h-3.5 w-3.5" />
+              <span className="text-[8px] font-medium uppercase tracking-wider">Locked</span>
+            </div>
+          )}
         </div>
-      )}
+        
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          {event.status === "pending" && (
+            <Button onClick={onStart} disabled={busy} size="sm" className='gap-2 flex-1 sm:flex-none rounded-lg font-semibold shadow-sm'>
+              <Play className='h-3.5 w-3.5' /> Start Event
+            </Button>
+          )}
+          {event.status === "running" && (
+            <Button
+              onClick={onComplete}
+              variant='secondary'
+              disabled={busy}
+              size="sm"
+              className='gap-2 flex-1 sm:flex-none rounded-lg font-semibold border'
+            >
+              {event.type === "banter" ? <><Archive className='h-3.5 w-3.5' /> Archive Room</> : <><Pause className='h-3.5 w-3.5' /> Complete</>}
+            </Button>
+          )}
+          {event.status === "completed" && !event.isPublished && event.type !== "banter" && (
+            <Button
+              onClick={onPublish}
+              disabled={busy}
+              size="sm"
+              className='gap-2 flex-1 sm:flex-none rounded-lg bg-green-600 hover:bg-green-700 text-white font-semibold shadow-sm'
+            >
+              <CloudUpload className='h-3.5 w-3.5' /> Publish Results
+            </Button>
+          )}
+          {onResetLink && (
+            <Button
+              onClick={onResetLink}
+              variant="outline"
+              size="sm"
+              disabled={busy}
+              className='gap-2 shrink-0 rounded-lg h-9 border-dashed text-amber-600 border-amber-600/30 hover:bg-amber-600/10 dark:text-amber-500 dark:border-amber-500/30'
+            >
+              <RefreshCw className="h-3.5 w-3.5" /> Reset Link
+            </Button>
+          )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Lifecycle */}
-        <Card className={cn(!isEditable && "opacity-80 bg-muted/20")}>
-          <CardHeader>
-            <CardTitle className='text-base font-semibold flex items-center gap-2'>
-              <Play className="h-4 w-4 text-primary" /> Status Control
-            </CardTitle>
-            <CardDescription>Manage the lifecycle of your event.</CardDescription>
-          </CardHeader>
-          <CardContent className='flex flex-col gap-3'>
-            {event.status === "pending" && (
-              <Button onClick={onStart} disabled={busy} className='w-full gap-2 justify-start'>
-                <Play className='h-4 w-4' /> Start Event
-              </Button>
-            )}
-            {event.status === "running" && (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
               <Button
-                onClick={onComplete}
-                variant='secondary'
+                variant='ghost'
+                size="icon"
                 disabled={busy}
-                className='w-full gap-2 justify-start'
+                title="Delete Event"
+                className='h-9 w-9 shrink-0 rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors ml-1'
               >
-                <Pause className='h-4 w-4' /> Complete Event
+                <Trash2 className='h-4 w-4' />
               </Button>
-            )}
-            {event.status === "completed" && !event.isPublished && (
-              <Button
-                onClick={onPublish}
-                variant='default'
-                disabled={busy}
-                className='w-full gap-2 justify-start bg-green-600 hover:bg-green-700'
-              >
-                <CloudUpload className='h-4 w-4' /> Publish Results
-              </Button>
-            )}
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete event?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This is permanent and cannot be undone. All responses will be lost.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={onDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      </div>
 
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button
-                  variant='ghost'
-                  disabled={busy}
-                  className='w-full gap-2 justify-start text-destructive hover:bg-destructive/10 hover:text-destructive'
-                >
-                  <Trash2 className='h-4 w-4' /> Delete Event
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Delete event?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    This is permanent and cannot be undone. All responses will be lost.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={onDelete} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">Delete</AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </CardContent>
-        </Card>
-
-        {/* Settings */}
-        <Card className={cn(!isEditable && "opacity-70 bg-muted/10 border-dashed")}>
-          <CardHeader>
-            <CardTitle className='text-base font-semibold flex items-center gap-2'>
-              <Settings2 className="h-4 w-4 text-primary" /> Settings
-            </CardTitle>
-          </CardHeader>
-          <CardContent className='space-y-5'>
-            <div className='space-y-1.5'>
-              <Label className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2">
-                Title {!isEditable && <LockKeyhole className="h-3 w-3" />}
-              </Label>
-              <Input
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                disabled={!isEditable}
-                placeholder="Event title"
-                className={cn(!isEditable && "bg-transparent border-none px-0 h-auto font-medium disabled:opacity-100")}
-              />
-            </div>
-            <div className='space-y-1.5'>
-              <Label className="text-xs font-bold uppercase text-muted-foreground flex items-center gap-2">
-                Description {!isEditable && <LockKeyhole className="h-3 w-3" />}
-              </Label>
-              <Textarea
-                rows={3}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className={cn('resize-none', !isEditable && "bg-transparent border-none px-0 h-auto disabled:opacity-100")}
-                disabled={!isEditable}
-                placeholder="Optional description"
-              />
-            </div>
-            <div className='space-y-3'>
-              <Label className="text-xs font-bold uppercase text-muted-foreground">Results Visibility</Label>
-              <div className="flex bg-muted p-1 rounded-lg border shadow-inner">
-                <button
-                  type="button"
+      {/* Settings */}
+      <Card className={cn("transition-opacity", !isEditable && "opacity-60 pointer-events-none")}>
+        <CardHeader className="pb-4 border-b bg-muted/20">
+          <CardTitle className='text-base font-semibold flex items-center gap-2'>
+            <Settings2 className="h-4 w-4 text-primary" /> Configuration
+          </CardTitle>
+          <CardDescription>Update your event details and preferences.</CardDescription>
+        </CardHeader>
+        <CardContent className='p-6 space-y-8'>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="space-y-6">
+              <div className='space-y-2'>
+                <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                  Title
+                </Label>
+                <Input
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
                   disabled={!isEditable}
-                  onClick={() => setResultsVisibility('public')}
-                  className={cn(
-                    "flex-1 flex items-center justify-center gap-2 py-1.5 text-xs font-semibold rounded-md transition-all active:scale-95",
-                    resultsVisibility === 'public' 
-                      ? "bg-zinc-600 text-white shadow-sm" 
-                      : "text-muted-foreground hover:bg-muted"
-                  )}
-                >
-                  <BarChart2 className="h-3.5 w-3.5" /> Public
-                </button>
-                <button
-                  type="button"
+                  placeholder="Event title"
+                  className="h-12 bg-muted/30 focus-visible:ring-1 text-base font-medium"
+                />
+              </div>
+              <div className='space-y-2'>
+                <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                  Description
+                </Label>
+                <Textarea
+                  rows={4}
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  className="resize-none bg-muted/30 focus-visible:ring-1"
                   disabled={!isEditable}
-                  onClick={() => setResultsVisibility('private')}
-                  className={cn(
-                    "flex-1 flex items-center justify-center gap-2 py-1.5 text-xs font-semibold rounded-md transition-all active:scale-95",
-                    resultsVisibility === 'private' 
-                      ? "bg-zinc-600 text-white shadow-sm" 
-                      : "text-muted-foreground hover:bg-muted"
-                  )}
-                >
-                  <LockKeyhole className="h-3.5 w-3.5" /> Private
-                </button>
+                  placeholder="Optional description"
+                />
               </div>
             </div>
-            <div className='flex items-center justify-between'>
-              <Label className="text-sm font-medium">Require Login</Label>
-              <Switch
-                checked={authOnly}
-                onCheckedChange={setAuthOnly}
-                disabled={!isEditable}
-              />
-            </div>
-            <Separator />
-            <div className='space-y-3'>
-              <div className='flex items-center justify-between'>
-                <Label className="text-sm font-medium">Auto-Expire</Label>
+
+            <div className="space-y-6">
+              <div className='space-y-3 p-4 rounded-xl border bg-muted/10'>
+                <Label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Results Visibility</Label>
+                <div className="flex bg-muted p-1 rounded-lg border shadow-inner">
+                  <button
+                    type="button"
+                    disabled={!isEditable}
+                    onClick={() => setResultsVisibility('public')}
+                    className={cn(
+                      "flex-1 flex items-center justify-center gap-2 py-2 text-sm font-semibold rounded-md transition-all",
+                      resultsVisibility === 'public' 
+                        ? "bg-zinc-400 dark:bg-zinc-700 text-foreground shadow-sm" 
+                        : "text-muted-foreground hover:bg-muted/80"
+                    )}
+                  >
+                    <BarChart2 className="h-4 w-4" /> Public
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!isEditable}
+                    onClick={() => setResultsVisibility('private')}
+                    className={cn(
+                      "flex-1 flex items-center justify-center gap-2 py-2 text-sm font-semibold rounded-md transition-all",
+                      resultsVisibility === 'private' 
+                        ? "bg-zinc-400 dark:bg-zinc-700 text-foreground shadow-sm" 
+                        : "text-muted-foreground hover:bg-muted/80"
+                    )}
+                  >
+                    <LockKeyhole className="h-4 w-4" /> Private
+                  </button>
+                </div>
+              </div>
+
+              <div className='flex items-center justify-between p-4 rounded-xl border bg-muted/10'>
+                <div className="space-y-0.5">
+                  <Label className="text-sm font-bold">Require Login</Label>
+                  <p className="text-xs text-muted-foreground">Only authenticated users can participate.</p>
+                </div>
                 <Switch
-                  checked={hasExpiry}
-                  onCheckedChange={toggleExpiry}
+                  checked={authOnly}
+                  onCheckedChange={setAuthOnly}
                   disabled={!isEditable}
                 />
               </div>
-              {hasExpiry && (
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant='outline'
-                      disabled={!isEditable}
-                      className={cn(
-                        "w-full justify-start gap-2 h-9",
-                        !safeDate && "text-muted-foreground",
-                        !isEditable && "border-none bg-muted/30 h-8"
-                      )}
-                    >
-                      <CalendarIcon className='h-4 w-4' />
-                      {safeDate ? format(safeDate, "PPP p") : "Pick date & time"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className='w-auto p-4 space-y-4 bg-[#1c1c1b] border-4 border-primary shadow-[0_0_50px_rgba(0,0,0,1)]' align='start'>
-                    <Calendar
-                      mode='single'
-                      selected={safeDate}
-                      className="rounded-md border bg-muted/20"
-                      onSelect={(d) => {
-                        if (!d) return;
-                        const next = new Date(d);
-                        if (safeDate)
-                          next.setHours(
-                            safeDate.getHours(),
-                            safeDate.getMinutes(),
-                          );
-                        setExpiresAt(next);
-                      }}
-                      initialFocus
-                    />
-                    <div className='space-y-4 p-5 rounded-xl border-4 border-primary bg-[#2a2a28] shadow-[0_0_30px_rgba(0,0,0,0.8)]'>
-                      <Label className='text-sm font-semibold text-primary flex items-center gap-2'>
-                        <Clock className="h-4 w-4" /> Finalize Time (24h)
-                      </Label>
-                      <div className='flex items-center justify-center gap-3'>
-                        <Select
-                          value={
-                            safeDate
-                              ? safeDate.getHours().toString().padStart(2, "0")
-                              : "12"
-                          }
-                          onValueChange={(h) => {
-                            const d = new Date(expiresAt ?? new Date());
-                            d.setHours(parseInt(h));
-                            setExpiresAt(d);
-                          }}
-                        >
-                          <SelectTrigger className='w-20 h-10 text-base font-medium bg-card border-2 border-primary/40'>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent className='max-h-48 border-4'>
-                            {Array.from({ length: 24 }, (_, i) => (
-                              <SelectItem
-                                key={i}
-                                value={i.toString().padStart(2, "0")}
-                                className="font-medium"
-                              >
-                                {i.toString().padStart(2, "0")}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <span className='font-semibold text-2xl text-primary/60'>:</span>
-                        <Select
-                          value={
-                            safeDate
-                              ? safeDate.getMinutes().toString().padStart(2, "0")
-                              : "00"
-                          }
-                          onValueChange={(m) => {
-                            const d = new Date(expiresAt ?? new Date());
-                            d.setMinutes(parseInt(m));
-                            setExpiresAt(d);
-                          }}
-                        >
-                          <SelectTrigger className='w-20 h-10 text-base font-medium bg-card border-2 border-primary/40'>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent className='max-h-48 border-4'>
-                            {Array.from({ length: 60 }, (_, i) => (
-                              <SelectItem
-                                key={i}
-                                value={i.toString().padStart(2, "0")}
-                                className="font-medium"
-                              >
-                                {i.toString().padStart(2, "0")}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+
+              <div className='space-y-3 p-4 rounded-xl border bg-muted/10'>
+                <div className='flex items-center justify-between'>
+                  <div className="space-y-0.5">
+                    <Label className="text-sm font-bold">Auto-Expire</Label>
+                    <p className="text-xs text-muted-foreground">Automatically close the event at a specific time.</p>
+                  </div>
+                  <Switch
+                    checked={hasExpiry}
+                    onCheckedChange={toggleExpiry}
+                    disabled={!isEditable}
+                  />
+                </div>
+                {hasExpiry && (
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant='outline'
+                        disabled={!isEditable}
+                        className={cn(
+                          "w-full justify-start gap-3 h-12 mt-2",
+                          !safeDate && "text-muted-foreground",
+                        )}
+                      >
+                        <CalendarIcon className='h-4 w-4' />
+                        {safeDate ? format(safeDate, "PPP p") : "Pick date & time"}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className='w-auto p-4 space-y-4 bg-card border shadow-xl' align='start'>
+                      <Calendar
+                        mode='single'
+                        selected={safeDate}
+                        className="rounded-md border bg-muted/20"
+                        onSelect={(d) => {
+                          if (!d) return;
+                          const next = new Date(d);
+                          if (safeDate)
+                            next.setHours(
+                              safeDate.getHours(),
+                              safeDate.getMinutes(),
+                            );
+                          setExpiresAt(next);
+                        }}
+                        initialFocus
+                      />
+                      <div className='space-y-3 p-4 rounded-xl border bg-muted/30'>
+                        <Label className='text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2'>
+                          <Clock className="h-3.5 w-3.5" /> Time (24h)
+                        </Label>
+                        <div className='flex items-center justify-center gap-2'>
+                          <Select
+                            value={safeDate ? safeDate.getHours().toString().padStart(2, "0") : "12"}
+                            onValueChange={(h) => {
+                              const d = new Date(expiresAt ?? new Date());
+                              d.setHours(parseInt(h));
+                              setExpiresAt(d);
+                            }}
+                          >
+                            <SelectTrigger className='w-[70px] h-9 text-sm font-medium'>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className='max-h-48'>
+                              {Array.from({ length: 24 }, (_, i) => (
+                                <SelectItem key={i} value={i.toString().padStart(2, "0")}>
+                                  {i.toString().padStart(2, "0")}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <span className='font-bold text-muted-foreground'>:</span>
+                          <Select
+                            value={safeDate ? safeDate.getMinutes().toString().padStart(2, "0") : "00"}
+                            onValueChange={(m) => {
+                              const d = new Date(expiresAt ?? new Date());
+                              d.setMinutes(parseInt(m));
+                              setExpiresAt(d);
+                            }}
+                          >
+                            <SelectTrigger className='w-[70px] h-9 text-sm font-medium'>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className='max-h-48'>
+                              {Array.from({ length: 60 }, (_, i) => (
+                                <SelectItem key={i} value={i.toString().padStart(2, "0")}>
+                                  {i.toString().padStart(2, "0")}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
-                    </div>
-                  </PopoverContent>
-                </Popover>
-              )}
+                    </PopoverContent>
+                  </Popover>
+                )}
+              </div>
             </div>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

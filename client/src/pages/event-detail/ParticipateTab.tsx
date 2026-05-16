@@ -140,7 +140,7 @@ export function ParticipateTab({
                   {items.length > 1 && `${idx + 1}. `}{item.text}
                 </CardTitle>
                 {item.isMandatory && (
-                  <Badge variant="outline" className="text-[10px] shrink-0">Required</Badge>
+                  <Badge variant="outline" className="text-[8px] shrink-0">Required</Badge>
                 )}
               </div>
               <CardDescription>

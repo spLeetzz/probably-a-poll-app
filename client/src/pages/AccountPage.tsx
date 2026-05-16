@@ -77,122 +77,74 @@ export function AccountPage() {
         </Button>
       </div>
 
-      <div className="flex flex-col md:flex-row gap-8 items-start">
-        {/* Profile Card */}
-        <div className="w-full md:w-1/3 space-y-6">
-          <Card className="overflow-hidden border-primary/10 shadow-lg">
-            <div className="h-24 bg-primary/5" />
-            <div className="px-6 pb-6 -mt-12 text-center space-y-4">
-              <Avatar className="h-24 w-24 mx-auto border-4 border-background ring-2 ring-primary/10">
-                <AvatarImage src={u.image || ''} />
-                <AvatarFallback className="text-2xl bg-primary/10 text-primary">
-                  {u.name?.slice(0, 2).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-              <div className="space-y-1">
-                <h2 className="text-2xl font-black">{u.name}</h2>
-                <p className="text-muted-foreground text-sm flex items-center justify-center gap-1">
-                  <Mail className="h-3 w-3" /> {u.email}
-                </p>
-              </div>
-              <div className="flex justify-center gap-2">
-                {u.emailVerified ? (
-                  <Badge className="bg-green-500/10 text-green-600 border-green-500/20 gap-1">
-                    <ShieldCheck className="h-3 w-3" /> Verified
-                  </Badge>
-                ) : (
-                  <Badge variant="outline" className="text-amber-600 border-amber-500/20 gap-1">
-                    Pending Verification
-                  </Badge>
-                )}
-                {isAnonymous && <Badge variant="secondary">Guest</Badge>}
-              </div>
-              <Separator />
-              <Button variant="destructive" className="w-full gap-2 border-dashed" onClick={onSignOut}>
+      <div className="flex flex-col gap-8 max-w-3xl mx-auto">
+        {/* Profile Header Banner */}
+        <Card className="p-8 flex flex-col md:flex-row items-center justify-between border-primary/10 shadow-lg relative overflow-hidden gap-6">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-bl-full -mr-10 -mt-10 pointer-events-none" />
+          
+          <div className="space-y-6 relative z-10 text-center md:text-left flex-1">
+            <div className="space-y-2">
+              <h2 className="text-4xl font-black tracking-tight">{u.name}</h2>
+              <p className="text-muted-foreground text-lg flex items-center justify-center md:justify-start gap-2">
+                <Mail className="h-4 w-4" /> {u.email}
+              </p>
+              {isAnonymous && <Badge variant="secondary" className="mt-2 uppercase tracking-widest text-[10px]">Guest User</Badge>}
+            </div>
+            <div className="flex items-center gap-3 justify-center md:justify-start">
+              <Button variant="destructive" className="gap-2 border-dashed" onClick={onSignOut}>
                 <LogOut className="h-4 w-4" /> Sign Out
               </Button>
             </div>
-          </Card>
-        </div>
-
-        {/* Details and Actions */}
-        <div className="flex-1 space-y-8">
-          <section className="space-y-4">
-            <h3 className="text-xl font-bold flex items-center gap-2">
-              <User className="h-5 w-5 text-primary" />
-              Account Details
-            </h3>
-            <Card>
-              <CardContent className="pt-6 grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <div className="space-y-1">
-                  <Label className="text-muted-foreground text-[10px] uppercase tracking-widest">Full Name</Label>
-                  <p className="font-medium">{u.name}</p>
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-muted-foreground text-[10px] uppercase tracking-widest">Email Address</Label>
-                  <p className="font-medium">{u.email}</p>
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-muted-foreground text-[10px] uppercase tracking-widest">Account Created</Label>
-                  <p className="font-medium">May 2026</p> {/* Placeholder or derived from token */}
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-muted-foreground text-[10px] uppercase tracking-widest">User ID</Label>
-                  <code className="text-xs font-mono bg-muted px-1 rounded">{u.id.slice(0, 8)}...</code>
-                </div>
-              </CardContent>
-            </Card>
-          </section>
-
-          {!isAnonymous && (
-            <section className="space-y-4">
-              <h3 className="text-xl font-bold flex items-center gap-2">
-                <KeyRound className="h-5 w-5 text-primary" />
-                Security Settings
-              </h3>
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Update Password</CardTitle>
-                  <CardDescription>Ensure your account is using a long, random password to stay secure.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={onChangePassword} className="space-y-4 max-w-md">
-                    <div className="space-y-2">
-                      <Label htmlFor="current">Current Password</Label>
-                      <Input
-                        id="current"
-                        type="password"
-                        value={currentPassword}
-                        onChange={e => setCurrentPassword(e.target.value)}
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="new">New Password</Label>
-                      <Input
-                        id="new"
-                        type="password"
-                        value={newPassword}
-                        onChange={e => setNewPassword(e.target.value)}
-                        required
-                        minLength={6}
-                      />
-                    </div>
-                    <Button type="submit" disabled={cpLoading} className="w-full sm:w-auto">
-                      {cpLoading ? "Updating..." : "Change Password"}
-                    </Button>
-                  </form>
-                </CardContent>
-              </Card>
-            </section>
-          )}
-
-          <div className="pt-4">
-            <Button variant="link" className="px-0 text-muted-foreground hover:text-primary transition-colors" asChild>
-              <Link to="/login">Use another account</Link>
-            </Button>
           </div>
-        </div>
+          
+          <Avatar className="h-32 w-32 md:h-40 md:w-40 border-4 border-background ring-2 ring-primary/10 relative z-10 shadow-xl shrink-0">
+            <AvatarImage src={u.image || ''} />
+            <AvatarFallback className="text-4xl md:text-5xl font-black bg-primary/10 text-primary">
+              {u.name?.slice(0, 2).toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+        </Card>
+
+        {/* Security Settings */}
+        {!isAnonymous && (
+          <Card className="border-primary/5">
+            <CardHeader>
+              <CardTitle className="text-xl flex items-center gap-2">
+                <KeyRound className="h-5 w-5 text-primary" />
+                Update Password
+              </CardTitle>
+              <CardDescription>Ensure your account is using a long, random password to stay secure.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={onChangePassword} className="space-y-4 max-w-md">
+                <div className="space-y-2">
+                  <Label htmlFor="current">Current Password</Label>
+                  <Input
+                    id="current"
+                    type="password"
+                    value={currentPassword}
+                    onChange={e => setCurrentPassword(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="new">New Password</Label>
+                  <Input
+                    id="new"
+                    type="password"
+                    value={newPassword}
+                    onChange={e => setNewPassword(e.target.value)}
+                    required
+                    minLength={6}
+                  />
+                </div>
+                <Button type="submit" disabled={cpLoading} className="w-full sm:w-auto">
+                  {cpLoading ? "Updating..." : "Change Password"}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   )
