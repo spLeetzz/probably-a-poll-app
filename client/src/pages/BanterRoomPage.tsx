@@ -3,7 +3,6 @@ import { useParams, useNavigate } from "react-router-dom";
 import { io, Socket } from "socket.io-client";
 import * as api from "../api/events-api";
 import { authClient } from "../lib/auth-client";
-import { getSocketBaseUrl } from "../lib/socket-url";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -12,6 +11,7 @@ import {
   CardHeader,
   CardTitle,
   CardDescription,
+  CardFooter,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
@@ -188,7 +188,7 @@ export function BanterRoomPage() {
     if (!participant || !joinSlug) return;
 
     const socket: Socket<BanterServerToClient, BanterClientToServer> = io(
-      `${getSocketBaseUrl()}/banter`,
+      "/banter",
       {
         path: "/socket.io",
         withCredentials: true,
@@ -344,7 +344,7 @@ export function BanterRoomPage() {
       });
 
       socketRef.current?.emit("broadcast_item", {
-        item: finalItem as unknown as Record<string, unknown>,
+        item: finalItem as Record<string, unknown>,
       });
 
       toast.success("Banter added");
@@ -514,7 +514,7 @@ export function BanterRoomPage() {
             <Button
               variant='outline'
               size='icon'
-              onClick={() => void initRoom()}
+              onClick={() => void initRoom(true)}
               title='Refresh'
             >
               <RefreshCcw className='h-4 w-4' />

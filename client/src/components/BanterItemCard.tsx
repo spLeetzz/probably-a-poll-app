@@ -39,7 +39,7 @@ export function BanterItemCard({
   const [picked, setPicked] = useState<string | null>(() => localStorage.getItem(storageKey))
   const [voted, setVoted] = useState(() => !!localStorage.getItem(storageKey))
   const [submitting, setSubmitting] = useState(false)
-  
+
   const [textReply, setTextReply] = useState('')
   const [textReplied, setTextReplied] = useState(false)
 
@@ -148,7 +148,7 @@ export function BanterItemCard({
             {textReplied ? (
               <div className="rounded-lg bg-primary/10 border border-primary/20 px-3 py-3 text-sm text-primary flex items-center justify-center gap-2 font-medium">
                 <CheckCircle2 className="h-4 w-4 shrink-0" />
-                Response recorded!
+                Reply sent to chat!
               </div>
             ) : isArchived ? (
               <div className="rounded-lg bg-muted/40 border px-3 py-3 text-sm text-muted-foreground flex items-center justify-center gap-2 font-medium">

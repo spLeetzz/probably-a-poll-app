@@ -7,21 +7,17 @@ import { setupSocket } from "./socket/index.js";
 import { ALLOWED_ORIGINS } from "./origins.js";
 
 const server = createServer(async (req, res) => {
-  const origin = req.headers.origin || "";
-  
-  if (origin && ALLOWED_ORIGINS.includes(origin)) {
-    res.setHeader("Access-Control-Allow-Origin", origin);
-    res.setHeader("Access-Control-Allow-Credentials", "true");
-  }
-
-  if (req.method === "OPTIONS") {
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization, x-session-token");
-    res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS");
-    res.writeHead(204).end();
-    return;
-  }
-
   if (req.url?.startsWith("/api/auth")) {
+    const origin = req.headers.origin || "";
+    if (ALLOWED_ORIGINS.includes(origin)) {
+      res.setHeader("Access-Control-Allow-Origin", origin);
+      res.setHeader("Access-Control-Allow-Credentials", "true");
+    }
+    if (req.method === "OPTIONS") {
+      res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+      res.writeHead(204).end();
+      return;
+    }
     return toNodeHandler(auth)(req, res);
   }
   app.routing(req, res);

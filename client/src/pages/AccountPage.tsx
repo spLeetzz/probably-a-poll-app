@@ -7,8 +7,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
-import { KeyRound, Mail, LogOut, ChevronLeft } from 'lucide-react'
+import { KeyRound, Mail, User, ShieldCheck, LogOut, ChevronLeft } from 'lucide-react'
 import { toast } from 'sonner'
 
 export function AccountPage() {
@@ -80,7 +81,7 @@ export function AccountPage() {
         {/* Profile Header Banner */}
         <Card className="p-8 flex flex-col md:flex-row items-center justify-between border-primary/10 shadow-lg relative overflow-hidden gap-6">
           <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-bl-full -mr-10 -mt-10 pointer-events-none" />
-          
+
           <div className="space-y-6 relative z-10 text-center md:text-left flex-1">
             <div className="space-y-2">
               <h2 className="text-4xl font-black tracking-tight">{u.name}</h2>
@@ -95,7 +96,7 @@ export function AccountPage() {
               </Button>
             </div>
           </div>
-          
+
           <Avatar className="h-32 w-32 md:h-40 md:w-40 border-4 border-background ring-2 ring-primary/10 relative z-10 shadow-xl shrink-0">
             <AvatarImage src={u.image || ''} />
             <AvatarFallback className="text-4xl md:text-5xl font-black bg-primary/10 text-primary">

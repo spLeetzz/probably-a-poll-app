@@ -35,7 +35,7 @@ export async function handleBanterVote(req: FastifyRequest, reply: FastifyReply)
   if (!updated) throw req.server.httpErrors.notFound("Option not found");
 
   // Broadcast to all participants in the banter room
-  const banterNsp = getIo().of("/banter") as any;
+  const banterNsp = getIo().of("/banter");
   banterNsp.to(eventId).emit("answer_recorded", {
     itemId,
     optionId,

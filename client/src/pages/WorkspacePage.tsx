@@ -231,9 +231,9 @@ function EventCard({ ev }: { ev: Event }) {
             </div>
             <Badge
               variant='outline'
-              className='text-[9px] h-5 px-2 font-bold uppercase tracking-[0.15em] bg-transparent text-muted-foreground border-muted-foreground/20'
+              className='text-[10px] h-5 px-2 font-medium bg-background/50'
             >
-              {isBanter ? "BANTER" : "POLL"}
+              {isBanter ? "💬 banter" : "📊 poll"}
             </Badge>
           </div>
           <CardTitle className='text-base sm:text-lg font-bold leading-tight line-clamp-2 group-hover:text-primary transition-colors'>
@@ -246,7 +246,7 @@ function EventCard({ ev }: { ev: Event }) {
             {new Date(ev.createdAt).toLocaleDateString()}
           </span>
           <span className='flex items-center gap-1.5 font-medium'>
-            {ev.itemCount} {ev.itemCount === 1 ? "question" : "questions"}
+            {ev.itemCount} {ev.itemCount === 1 ? "item" : "items"}
           </span>
         </CardFooter>
       </Card>
@@ -469,8 +469,8 @@ export function WorkspacePage() {
                       {(hasInteracted
                         ? createMode === "poll"
                         : autoMode === "poll") && (
-                        <div className='absolute top-4 right-4 h-2 w-2 rounded-full bg-primary animate-pulse' />
-                      )}
+                          <div className='absolute top-4 right-4 h-2 w-2 rounded-full bg-primary animate-pulse' />
+                        )}
                     </button>
 
                     <button
@@ -496,8 +496,8 @@ export function WorkspacePage() {
                       {(hasInteracted
                         ? createMode === "banter"
                         : autoMode === "banter") && (
-                        <div className='absolute top-4 right-4 h-2 w-2 rounded-full bg-primary animate-pulse' />
-                      )}
+                          <div className='absolute top-4 right-4 h-2 w-2 rounded-full bg-primary animate-pulse' />
+                        )}
                     </button>
                   </div>
 

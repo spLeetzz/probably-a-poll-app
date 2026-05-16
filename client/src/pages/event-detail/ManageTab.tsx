@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Separator } from "@/components/ui/separator";
 import {
   Select,
   SelectContent,
@@ -161,8 +162,8 @@ export function ManageTab({
           <div className={cn(
             "h-2 w-2 rounded-full",
             event.status === 'running' ? "bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.5)]" :
-            event.status === 'completed' ? "bg-blue-500" :
-            "bg-amber-500"
+              event.status === 'completed' ? "bg-blue-500" :
+                "bg-amber-500"
           )} />
           <span className="text-sm font-semibold capitalize tracking-wide text-foreground">
             {event.status}
@@ -174,7 +175,7 @@ export function ManageTab({
             </div>
           )}
         </div>
-        
+
         <div className="flex items-center gap-2 w-full sm:w-auto">
           {event.status === "pending" && (
             <Button onClick={onStart} disabled={busy} size="sm" className='gap-2 flex-1 sm:flex-none rounded-lg font-semibold shadow-sm'>
@@ -289,8 +290,8 @@ export function ManageTab({
                     onClick={() => setResultsVisibility('public')}
                     className={cn(
                       "flex-1 flex items-center justify-center gap-2 py-2 text-sm font-semibold rounded-md transition-all",
-                      resultsVisibility === 'public' 
-                        ? "bg-zinc-400 dark:bg-zinc-700 text-foreground shadow-sm" 
+                      resultsVisibility === 'public'
+                        ? "bg-zinc-400 dark:bg-zinc-700 text-foreground shadow-sm"
                         : "text-muted-foreground hover:bg-muted/80"
                     )}
                   >
@@ -302,8 +303,8 @@ export function ManageTab({
                     onClick={() => setResultsVisibility('private')}
                     className={cn(
                       "flex-1 flex items-center justify-center gap-2 py-2 text-sm font-semibold rounded-md transition-all",
-                      resultsVisibility === 'private' 
-                        ? "bg-zinc-400 dark:bg-zinc-700 text-foreground shadow-sm" 
+                      resultsVisibility === 'private'
+                        ? "bg-zinc-400 dark:bg-zinc-700 text-foreground shadow-sm"
                         : "text-muted-foreground hover:bg-muted/80"
                     )}
                   >
