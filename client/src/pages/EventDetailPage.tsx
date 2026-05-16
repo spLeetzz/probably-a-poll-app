@@ -62,7 +62,6 @@ export function EventDetailPage() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
 
-  // Participate state
   const [pick, setPick] = useState<Record<string, string>>({});
   const [textAnswers, setTextAnswers] = useState<Record<string, string>>({});
   const [hasResponded, setHasResponded] = useState(() =>
@@ -473,7 +472,6 @@ export function EventDetailPage() {
 
   return (
     <div className='max-w-6xl mx-auto space-y-6'>
-      {/* Header */}
       <div className='space-y-3'>
         <div className='flex items-center gap-3'>
           <Button variant='ghost' size='icon' asChild className='h-8 w-8'>
@@ -537,7 +535,6 @@ export function EventDetailPage() {
         </div>
       </div>
 
-      {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
         <TabsList className='w-full bg-transparent p-0 border-b border-white/5'>
           <TabsTrigger value='participate' className='flex-1 gap-1.5 bg-transparent data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:border-b-2 data-[state=active]:border-white/20 rounded-none shadow-none opacity-50 data-[state=active]:opacity-100 transition-all'>

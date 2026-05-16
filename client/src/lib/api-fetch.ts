@@ -12,7 +12,7 @@ export async function apiFetch(
 ): Promise<Response> {
   const opts: RequestInit = { ...init, credentials: "include" };
   const href = typeof url === "string" ? url : url.toString();
-  const fullUrl = `${base}${href}`; // clean, one place
+  const fullUrl = `${base}${href}`;
 
   if (href.includes("/api/auth")) return fetch(fullUrl, opts);
 

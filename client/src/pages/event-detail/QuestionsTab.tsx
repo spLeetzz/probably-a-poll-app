@@ -152,7 +152,6 @@ export function QuestionsTab({
                   </div>
                 </div>
 
-                {/* Options editor */}
                 {isMCQ ? (
                   <div className='space-y-2 mt-4 bg-muted/20 p-3 rounded-lg border border-dashed'>
                     {opts.map((opt, i) => (

@@ -65,10 +65,11 @@ export async function listEvents(query: ListEventsQuery) {
     conditions.push(eq(events.creatorId, query.creatorId));
   } else {
     // Public feed: show non-slug events (polls) AND banter rooms that are NOT anonymous (private)
-    conditions.push(or(
+    const orCondition = or(
       isNull(events.joinSlug), 
       and(eq(events.type, "banter"), eq(events.isAnonymous, false))
-    ));
+    );
+    if (orCondition) conditions.push(orCondition);
   }
 
   if (query.type) conditions.push(eq(events.type, query.type));

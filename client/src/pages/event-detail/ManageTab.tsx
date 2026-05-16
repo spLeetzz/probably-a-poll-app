@@ -11,7 +11,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Separator } from "@/components/ui/separator";
 import {
   Select,
   SelectContent,
@@ -154,7 +153,6 @@ export function ManageTab({
 
   return (
     <div className='w-full space-y-6'>
-      {/* Sleek Minimal Status Bar */}
       <div className={cn(
         "flex flex-col sm:flex-row items-center justify-between p-2 pl-4 rounded-xl border transition-colors",
         !isEditable ? "bg-muted/30 border-border" : "bg-card border-primary/20 shadow-sm"
@@ -244,7 +242,6 @@ export function ManageTab({
         </div>
       </div>
 
-      {/* Settings */}
       <Card className={cn("transition-opacity", !isEditable && "opacity-60 pointer-events-none")}>
         <CardHeader className="pb-4 border-b bg-muted/20">
           <CardTitle className='text-base font-semibold flex items-center gap-2'>

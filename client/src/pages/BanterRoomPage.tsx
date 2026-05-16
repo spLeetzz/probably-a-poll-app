@@ -11,7 +11,6 @@ import {
   CardHeader,
   CardTitle,
   CardDescription,
-  CardFooter,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
@@ -129,7 +128,6 @@ export function BanterRoomPage() {
 
   const isCreator = session?.user?.id && event?.creatorId === session.user.id;
 
-  // Initialize room data
   const initRoom = useCallback(async () => {
     if (!joinSlug) return;
     setLoading(true);
@@ -185,7 +183,6 @@ export function BanterRoomPage() {
     void initRoom();
   }, [initRoom]);
 
-  // Socket setup
   useEffect(() => {
     if (!participant || !joinSlug) return;
 
@@ -295,13 +292,11 @@ export function BanterRoomPage() {
     const item = items.find((i) => i.id === itemId);
     if (!item) return;
 
-    // Add locally immediately
     setTextReplies((prev) => ({
       ...prev,
       [itemId]: [...(prev[itemId] || []), replyText],
     }));
 
-    // Broadcast to others
     socketRef.current?.emit("broadcast_text_reply", {
       itemId,
       text: replyText,
@@ -316,9 +311,6 @@ export function BanterRoomPage() {
     if (!event || !participant) return;
     setBusy(true);
     try {
-      // Use existing API to create item. Note: we might want to ensure 'order' is managed if we prepend.
-      // But usually 'prepend' is a UI thing, or we can use negative orders / re-order everything.
-      // For now, we just create it. The socket 'new_item' will trigger the prepend in state.
       const newItem = await api.createItem(
         event.id,
         {
@@ -350,9 +342,8 @@ export function BanterRoomPage() {
         return [finalItem, ...prev];
       });
 
-      // Broadcast to other users in the room
       socketRef.current?.emit("broadcast_item", {
-        item: finalItem as Record<string, unknown>,
+        item: finalItem as unknown as Record<string, unknown>,
       });
 
       toast.success("Banter added");
@@ -470,7 +461,6 @@ export function BanterRoomPage() {
 
   return (
     <div className='max-w-6xl mx-auto space-y-6'>
-      {/* Header Info */}
       <div className='space-y-3'>
         <div className='flex items-center gap-3'>
           <Button
@@ -523,7 +513,7 @@ export function BanterRoomPage() {
             <Button
               variant='outline'
               size='icon'
-              onClick={() => void initRoom(true)}
+              onClick={() => void initRoom()}
               title='Refresh'
             >
               <RefreshCcw className='h-4 w-4' />

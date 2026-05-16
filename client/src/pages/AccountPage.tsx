@@ -7,9 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
-import { KeyRound, Mail, User, ShieldCheck, LogOut, ChevronLeft } from 'lucide-react'
+import { KeyRound, Mail, LogOut, ChevronLeft } from 'lucide-react'
 import { toast } from 'sonner'
 
 export function AccountPage() {

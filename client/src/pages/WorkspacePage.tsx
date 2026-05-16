@@ -362,7 +362,6 @@ export function WorkspacePage() {
 
   return (
     <div className='relative'>
-      {/* Account Menu - Aligned with Content */}
       <div className='absolute top-0 right-0 z-50'>
         {session && !session.user.isAnonymous ? (
           <DropdownMenu>
@@ -432,7 +431,6 @@ export function WorkspacePage() {
         )}
       </div>
 
-      {/* Hero Container */}
       <div className='pb-4 pt-16 mb-6'>
         <div className='grid grid-cols-1 lg:grid-cols-2 gap-12 items-center'>
           <HeroText />
@@ -446,7 +444,6 @@ export function WorkspacePage() {
           >
             <div className='space-y-6 max-w-xl mx-auto lg:mx-0 lg:ml-auto'>
               <div className='relative'>
-                {/* Show Alternating Active Option */}
                 <div className='flex flex-col gap-4'>
                   <div className='flex gap-4'>
                     <button
@@ -504,7 +501,6 @@ export function WorkspacePage() {
                     </button>
                   </div>
 
-                  {/* Inline form appears when a mode is active */}
                   {hasInteracted && createMode && (
                     <div className='mt-4'>
                       <QuickCreateForm
@@ -527,7 +523,6 @@ export function WorkspacePage() {
           </div>
         </div>
 
-        {/* Prototype note - Bottom Centered */}
         <p
           className='text-base font-medium text-muted-foreground/40 italic mt-8 text-center text-balance max-w-2xl mx-auto leading-relaxed'
           style={{
@@ -542,7 +537,6 @@ export function WorkspacePage() {
 
       {/* Dashboard */}
       <div className='space-y-12'>
-        {/* My Events */}
         {sessionUserId && (
           <section>
             <SectionLabel
@@ -573,7 +567,6 @@ export function WorkspacePage() {
           </section>
         )}
 
-        {/* Open / Live Events */}
         <section>
           <SectionLabel
             icon={<Globe className='h-4 w-4' />}
@@ -602,7 +595,6 @@ export function WorkspacePage() {
           )}
         </section>
 
-        {/* Recent / Completed */}
         {completedEvents.length > 0 && (
           <section>
             <SectionLabel

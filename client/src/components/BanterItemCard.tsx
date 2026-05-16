@@ -9,7 +9,6 @@ interface BanterItemCardProps {
   item: api.ItemWithOptions
   eventId: string
   sessionToken?: string
-  /** Live vote count updates from socket: { optionId -> newCount } */
   liveVoteCounts: Record<string, number>
   onTextReply?: (itemId: string, text: string) => Promise<void>
   textReplies?: string[]
@@ -63,7 +62,7 @@ export function BanterItemCard({
       toast.success('Vote cast!')
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Vote failed')
-      setPicked(localStorage.getItem(storageKey)) // Reset to previous if any
+      setPicked(localStorage.getItem(storageKey))
     } finally {
       setSubmitting(false)
     }
@@ -98,7 +97,6 @@ export function BanterItemCard({
       <CardContent className="px-4 pb-4 space-y-3">
         {isMCQ ? (
           <>
-            {/* Options */}
             <div className="space-y-2">
               {item.options.map((opt, index) => {
                 const count = getCount(opt.id)
@@ -117,7 +115,6 @@ export function BanterItemCard({
                       ${isSelected ? 'border-foreground bg-foreground/5' : 'border-border'}
                     `}
                   >
-                    {/* Vote bar background ALWAYS visible with dynamic color */}
                     <div
                       className="absolute inset-0 transition-all duration-500 opacity-20"
                       style={{ width: `${pct}%`, backgroundColor: barColor }}
@@ -132,7 +129,6 @@ export function BanterItemCard({
                         )}
                         <span>{opt.text}</span>
                       </div>
-                      {/* Percentages ALWAYS visible */}
                       <span className="text-xs font-mono text-muted-foreground shrink-0">
                         {pct}% · {count}
                       </span>
@@ -147,7 +143,7 @@ export function BanterItemCard({
             </p>
           </>
         ) : (
-          /* Open-ended — Text Reply Form */
+          /* Open-ended text reply form */
           <div className="space-y-3">
             {textReplied ? (
               <div className="rounded-lg bg-primary/10 border border-primary/20 px-3 py-3 text-sm text-primary flex items-center justify-center gap-2 font-medium">

@@ -8,11 +8,28 @@ Anonymous or authenticated participants.
 
 Live vote sync via WebSocket. Approval-gated events. Analytics per question.
 
-```
 poll-app/
-├── server/   # Fastify backend | REST + WebSocket
-└── client/     # React + Vite frontend
+├── server/      # Fastify backend | REST + WebSocket | Drizzle ORM
+└── client/      # React 19 frontend | Vite | Tailwind CSS v4
 ```
+
+### Frontend Architecture (`client/src`)
+
+The frontend is structured for high-frequency real-time updates and seamless UX:
+
+- **`api/`**: Centralized API service (`events-api.ts`) using a custom `apiFetch` wrapper.
+- **`hooks/`**: 
+  - **`useEventRealtime.ts`**: Core synchronization engine. Manages Socket.io room subscriptions and reactive state updates for live votes and participant status.
+- **`components/`**: 
+  - **`BanterItemCard.tsx`**: Interactive component for live items, merging initial state with real-time socket increments.
+  - **`inline-poll-creator.tsx`**: Creator-facing tool for hot-loading questions into a running room.
+- **`lib/`**:
+  - **`api-fetch.ts`**: Intelligent fetch wrapper that handles 401 retries by silently bootstrapping anonymous sessions.
+  - **`auth-client.ts`**: Better Auth integration for Google and anonymous flows.
+- **`pages/`**:
+  - **`WorkspacePage.tsx`**: Dashboard with smooth hero animations and normalized creation workflows.
+  - **`BanterRoomPage.tsx`**: High-performance interaction space featuring live chat and real-time question streams.
+  - **`event-detail/`**: Comprehensive management suite (Manage, Participants, Questions, Results).
 
 ---
 
@@ -33,7 +50,9 @@ Ever had an argument in a WhatsApp group and couldn't settle it? Create a Banter
 - **Join modes:** open (anyone joins) or approval (host approves each participant)
 - **Results visibility:** public or private (creator-only until published)
 - **Auth gate:** mark event auth-only to block anonymous users from responding
-- Publish completed events to make results permanently visible
+- **Invite Management:** Creators can reset the `joinSlug` for Banter rooms to instantly revoke old links and generate new ones.
+- **Archive Room:** Transition Banter rooms to `completed` to permanently lock chat and voting while preserving results.
+- **Publish Results:** One-click transition for polls to make results permanently visible to all participants.
 
 ### Questions 
 
@@ -78,6 +97,15 @@ Ever had an argument in a WhatsApp group and couldn't settle it? Create a Banter
 - Total response count
 - Text answers collected per open-ended question
 - Only visible based on `resultsVisibility` setting
+- Real-time percentage recalculation as votes stream in
+
+### UI & UX Refinements
+
+- **Premium Aesthetics:** Zinc-based monochrome design system for a focused, premium feel.
+- **Micro-animations:** Smooth transitions, fade-ups, and interaction-aware scaling in the Workspace.
+- **Contextual Help:** Info-icon hover tooltips (using native titles) explain complex privacy/anonymity settings without breaking layout.
+- **Atomic Submissions:** Standard poll responses are bundled into a single transaction to ensure data integrity.
+- **Zero-Jump Navigation:** Normalized CSS layouts ensure the UI remains stable when switching between Banter and Poll creation tabs.
 
 ---
 
