@@ -11,7 +11,6 @@ import {
   CardHeader,
   CardTitle,
   CardDescription,
-  CardFooter,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
@@ -344,7 +343,7 @@ export function BanterRoomPage() {
       });
 
       socketRef.current?.emit("broadcast_item", {
-        item: finalItem as Record<string, unknown>,
+        item: finalItem as unknown as Record<string, unknown>,
       });
 
       toast.success("Banter added");
@@ -514,7 +513,7 @@ export function BanterRoomPage() {
             <Button
               variant='outline'
               size='icon'
-              onClick={() => void initRoom(true)}
+              onClick={() => void initRoom()}
               title='Refresh'
             >
               <RefreshCcw className='h-4 w-4' />
