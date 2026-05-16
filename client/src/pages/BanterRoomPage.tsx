@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { io, Socket } from "socket.io-client";
 import * as api from "../api/events-api";
 import { authClient } from "../lib/auth-client";
+import { getSocketBaseUrl } from "../lib/socket-url";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -32,6 +33,7 @@ import {
   ArrowLeft,
   WifiOff,
   LinkIcon,
+  LogIn,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -127,6 +129,9 @@ export function BanterRoomPage() {
   const [textReplies, setTextReplies] = useState<Record<string, string[]>>({});
 
   const isCreator = session?.user?.id && event?.creatorId === session.user.id;
+  const isAuthenticated = Boolean(session?.user);
+  const isAnonymous = Boolean(session?.user?.isAnonymous);
+  const isBlocked = event?.authOnly && (!isAuthenticated || isAnonymous);
 
   const initRoom = useCallback(async () => {
     if (!joinSlug) return;
@@ -187,7 +192,7 @@ export function BanterRoomPage() {
     if (!participant || !joinSlug) return;
 
     const socket: Socket<BanterServerToClient, BanterClientToServer> = io(
-      "/banter",
+      `${getSocketBaseUrl()}/banter`,
       {
         path: "/socket.io",
         withCredentials: true,
@@ -425,34 +430,48 @@ export function BanterRoomPage() {
             </div>
           </CardHeader>
           <CardContent>
-            <form onSubmit={onJoin} className='space-y-4'>
-              <div className='space-y-2'>
-                <Label htmlFor='displayName'>How should we call you?</Label>
-                <Input
-                  id='displayName'
-                  placeholder='Enter a display name'
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  required
-                  autoFocus
-                  className='text-center text-lg h-12'
-                />
+            {isBlocked ? (
+              <div className="flex flex-col items-center justify-center py-4 gap-4">
+                <div className="text-center space-y-1">
+                  <p className="font-semibold text-base">Sign in to join</p>
+                  <p className="text-sm text-muted-foreground">
+                    This room requires a verified account.
+                  </p>
+                </div>
+                <Button onClick={() => navigate("/login")} className="w-full h-12 gap-2 shadow-lg transition-all hover:scale-[1.02]">
+                  <LogIn className="h-4 w-4" /> Sign In
+                </Button>
               </div>
-              <Button
-                type='submit'
-                className='w-full h-14 text-sm font-bold uppercase tracking-wider rounded-xl shadow-lg transition-all hover:scale-[1.02] active:scale-[0.98] group'
-                disabled={joining || !displayName.trim()}
-              >
-                {joining ? (
-                  <Loader2 className='mr-2 h-5 w-5 animate-spin' />
-                ) : (
-                  <span className='flex items-center gap-2'>
-                    Join Banter{" "}
-                    <ArrowRight className='h-4 w-4 group-hover:translate-x-1 transition-transform' />
-                  </span>
-                )}
-              </Button>
-            </form>
+            ) : (
+              <form onSubmit={onJoin} className='space-y-4'>
+                <div className='space-y-2'>
+                  <Label htmlFor='displayName'>How should we call you?</Label>
+                  <Input
+                    id='displayName'
+                    placeholder='Enter a display name'
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    required
+                    autoFocus
+                    className='text-center text-lg h-12'
+                  />
+                </div>
+                <Button
+                  type='submit'
+                  className='w-full h-14 text-sm font-bold uppercase tracking-wider rounded-xl shadow-lg transition-all hover:scale-[1.02] active:scale-[0.98] group'
+                  disabled={joining || !displayName.trim()}
+                >
+                  {joining ? (
+                    <Loader2 className='mr-2 h-5 w-5 animate-spin' />
+                  ) : (
+                    <span className='flex items-center gap-2'>
+                      Join Banter{" "}
+                      <ArrowRight className='h-4 w-4 group-hover:translate-x-1 transition-transform' />
+                    </span>
+                  )}
+                </Button>
+              </form>
+            )}
           </CardContent>
         </Card>
       </div>

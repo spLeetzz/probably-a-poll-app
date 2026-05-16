@@ -231,9 +231,9 @@ function EventCard({ ev }: { ev: Event }) {
             </div>
             <Badge
               variant='outline'
-              className='text-[10px] h-5 px-2 font-medium bg-background/50'
+              className='text-[10px] h-5 px-2 font-medium uppercase tracking-widest bg-background/50'
             >
-              {isBanter ? "💬 banter" : "📊 poll"}
+              {isBanter ? "BANTER" : "POLL"}
             </Badge>
           </div>
           <CardTitle className='text-base sm:text-lg font-bold leading-tight line-clamp-2 group-hover:text-primary transition-colors'>
@@ -246,7 +246,7 @@ function EventCard({ ev }: { ev: Event }) {
             {new Date(ev.createdAt).toLocaleDateString()}
           </span>
           <span className='flex items-center gap-1.5 font-medium'>
-            {ev.itemCount} {ev.itemCount === 1 ? "item" : "items"}
+            {ev.itemCount} {ev.itemCount === 1 ? "question" : "questions"}
           </span>
         </CardFooter>
       </Card>

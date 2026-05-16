@@ -148,7 +148,7 @@ export function BanterItemCard({
             {textReplied ? (
               <div className="rounded-lg bg-primary/10 border border-primary/20 px-3 py-3 text-sm text-primary flex items-center justify-center gap-2 font-medium">
                 <CheckCircle2 className="h-4 w-4 shrink-0" />
-                Reply sent to chat!
+                Response recorded!
               </div>
             ) : isArchived ? (
               <div className="rounded-lg bg-muted/40 border px-3 py-3 text-sm text-muted-foreground flex items-center justify-center gap-2 font-medium">

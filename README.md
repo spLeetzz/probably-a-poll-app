@@ -9,8 +9,8 @@ Anonymous or authenticated participants.
 Live vote sync via WebSocket. Approval-gated events. Analytics per question.
 
 poll-app/
-├── server/      # Fastify backend | REST + WebSocket | Drizzle ORM
-└── client/      # React 19 frontend | Vite | Tailwind CSS v4
+├── server/      # Fastify backend | REST + WebSocket
+└── client/      # React 19 frontend | Vite
 ```
 
 ### Frontend Architecture (`client/src`)

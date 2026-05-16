@@ -68,7 +68,7 @@ export async function listEvents(query: ListEventsQuery) {
     conditions.push(or(
       isNull(events.joinSlug),
       and(eq(events.type, "banter"), eq(events.isAnonymous, false))
-    ));
+    )!);
   }
 
   if (query.type) conditions.push(eq(events.type, query.type));
