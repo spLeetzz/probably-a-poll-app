@@ -121,7 +121,9 @@ export async function handleGetEventBySlug(req: FastifyRequest, reply: FastifyRe
   const event = await repo.getEventBySlug(joinSlug);
   if (!event) throw req.server.httpErrors.notFound("Room not found");
 
-  const participantCount = await repo.getParticipantCount(event.id);
+  const io = getIo();
+  const sockets = await io.of("/banter").in(event.id).fetchSockets();
+  const participantCount = sockets.length;
 
   let participant = null;
   if (req.user?.id) {

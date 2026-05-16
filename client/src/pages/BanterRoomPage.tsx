@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { io, Socket } from "socket.io-client";
 import * as api from "../api/events-api";
 import { authClient } from "../lib/auth-client";
+import { getSocketBaseUrl } from "../lib/socket-url";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -187,7 +188,7 @@ export function BanterRoomPage() {
     if (!participant || !joinSlug) return;
 
     const socket: Socket<BanterServerToClient, BanterClientToServer> = io(
-      "/banter",
+      `${getSocketBaseUrl()}/banter`,
       {
         path: "/socket.io",
         withCredentials: true,
